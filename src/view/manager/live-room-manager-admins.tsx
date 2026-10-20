@@ -163,24 +163,22 @@ export function LiveRoomManagerAdmins() {
             {admins.map((admin) => (
               <div
                 key={admin.uid}
-                className="flex items-center justify-between p-3 hover:bg-muted/30">
+                className="flex items-center justify-between px-1 py-2.5 hover:bg-muted/30">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={admin.face || "/akarin.webp"} />
-                      <AvatarFallback className="text-xs">
-                        {admin.uname.slice(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                  </div>
+                  <Avatar className="size-7">
+                    <AvatarImage src={admin.face || "/akarin.webp"} />
+                    <AvatarFallback className="text-[10px]">
+                      {admin.uname.slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
                   <div>
-                    <p className="text-sm font-medium">
+                    <p className="text-[12px] font-medium">
                       {admin.uname}{" "}
-                      <span className="text-muted-foreground">
-                        (UID: {admin.uid})
+                      <span className="text-[10.5px] text-muted-foreground">
+                        UID {admin.uid}
                       </span>
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="mt-0.5 text-[10.5px] text-muted-foreground">
                       <HugeiconsIcon
                         icon={Clock}
                         className="mr-1 inline h-3 w-3"
@@ -205,28 +203,32 @@ export function LiveRoomManagerAdmins() {
 
   return (
     <>
-      <div className="space-y-3">
-        <Label>任命房管</Label>
+      <div className="shrink-0 space-y-2">
+        <Label className="text-[11px] text-muted-foreground">任命房管</Label>
         <div className="flex gap-2">
           <Input
             placeholder="输入 UID 或用户名"
             value={adminInput}
             onChange={(e) => setAdminInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleAppointAdmin()}
+            className="h-9 rounded-lg text-[12px]"
           />
-          <Button onClick={handleAppointAdmin} disabled={!adminInput.trim()}>
-            任命
+          <Button
+            onClick={handleAppointAdmin}
+            disabled={!adminInput.trim()}
+            className="h-9 rounded-lg">
+            任命房管
           </Button>
         </div>
       </div>
-      <div className="space-y-3">
+      <div className="flex min-h-0 flex-1 flex-col gap-2">
         <div className="flex items-center justify-between">
-          <Label>当前房管</Label>
+          <Label className="text-[11px] text-muted-foreground">当前房管</Label>
           <Badge variant="secondary">
-            当前房管数：{admins.length}/{maxCount}
+            {admins.length} / {maxCount}
           </Badge>
         </div>
-        <ScrollArea className="h-[calc(100vh-360px)] rounded-md border">
+        <ScrollArea className="h-[calc(100vh-360px)] rounded-lg border border-border">
           {content()}
         </ScrollArea>
       </div>

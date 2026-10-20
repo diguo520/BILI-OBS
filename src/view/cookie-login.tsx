@@ -1,12 +1,11 @@
 import { useState } from "react";
 import { AlertCircle } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useConfigStore } from "@/store/config";
 import { Spinner } from "@/components/ui/spinner";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { cn } from "@/lib/utils";
 
 interface CookieLoginProps {
   onLoginSuccess: () => void;
@@ -17,116 +16,96 @@ export function CookieLogin({ onLoginSuccess }: CookieLoginProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const parseCookie = (cookie: string): Record<string, string> => {
+  const parseCookie = (value: string): Record<string, string> => {
     const result: Record<string, string> = {};
-
-    cookie
+    value
       .split(";")
       .map((item) => item.trim())
       .filter(Boolean)
       .forEach((pair) => {
         const eqIndex = pair.indexOf("=");
         if (eqIndex === -1) return;
-
         const key = pair.slice(0, eqIndex).trim();
-        const value = pair.slice(eqIndex + 1).trim();
-
-        if (key && value) {
-          result[key] = value;
-        }
+        const val = pair.slice(eqIndex + 1).trim();
+        if (key && val) result[key] = val;
       });
-
     return result;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!cookie.trim()) {
-      setError("请输入您的小饼干~");
+      setError("请先粘贴 Cookie。");
       return;
     }
 
     setIsLoading(true);
     setError(null);
 
-    setTimeout(() => {
-      const parsed = parseCookie(cookie);
+    const parsed = parseCookie(cookie);
+    const missing = ["SESSDATA", "bili_jct"].filter((key) => !parsed[key]);
+    if (missing.length > 0) {
+      setError(`Cookie 缺少 ${missing.join("、")}，请复制完整内容。`);
+      setIsLoading(false);
+      return;
+    }
 
-      const missing: string[] = [];
-
-      for (const key of ["SESSDATA", "bili_jct"]) {
-        if (!parsed[key] || parsed[key].length === 0) {
-          missing.push(key);
-        }
-      }
-
-      if (missing.length > 0) {
-        setError("Cookie 无效。请检查并重试。");
-        setIsLoading(false);
-        return;
-      }
-      const state = useConfigStore.getState();
-      state.setCookies(
-        Object.entries(parsed).map(([name, value]) => ({ name, value })),
-      );
-      onLoginSuccess();
-      setIsLoading(true);
-    }, 1500);
+    const state = useConfigStore.getState();
+    state.setCookies(
+      Object.entries(parsed).map(([name, value]) => ({ name, value })),
+    );
+    onLoginSuccess();
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="cookie">Session Cookie</Label>
-        <div className="relative">
-          <Textarea
-            id="cookie"
-            value={cookie}
-            onChange={(e) => {
-              setCookie(e.target.value);
-              setError(null);
-            }}
-            placeholder="将您的 Cookie 粘贴到此处……"
-            rows={4}
-            className="field-sizing-fixed resize-none font-mono text-xs"
-          />
-        </div>
-      </div>
+    <form onSubmit={handleSubmit} className="space-y-3">
+      <Textarea
+        id="cookie"
+        value={cookie}
+        onChange={(e) => {
+          setCookie(e.target.value);
+          setError(null);
+        }}
+        placeholder="SESSDATA=...; bili_jct=...; DedeUserID=..."
+        rows={4}
+        aria-invalid={Boolean(error)}
+        className={cn(
+          "field-sizing-fixed resize-none rounded-lg font-mono text-[10.5px] leading-relaxed",
+          error && "border-destructive/60",
+        )}
+      />
 
       {error && (
-        <Alert variant="destructive">
-          <HugeiconsIcon icon={AlertCircle} />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-2.5 py-2 text-[10.5px] leading-relaxed text-destructive">
+          <HugeiconsIcon icon={AlertCircle} className="mt-px size-3.5 shrink-0" />
+          {error}
+        </div>
       )}
+
+      <div className="rounded-lg border border-border bg-muted/40 px-3 py-2.5">
+        <div className="mb-1 text-[10.5px] font-medium text-foreground/85">
+          如何获取 Cookie
+        </div>
+        <ol className="list-inside list-decimal space-y-0.5 text-[10px] leading-relaxed text-muted-foreground">
+          <li>在浏览器登录哔哩哔哩网页版</li>
+          <li>打开开发者工具 Network，选中任意 api.bilibili.com 请求</li>
+          <li>复制请求头中的完整 Cookie 内容</li>
+        </ol>
+      </div>
 
       <Button
         type="submit"
         disabled={isLoading || !cookie.trim()}
-        className="w-full">
+        className="h-8 w-full rounded-lg text-[11.5px]">
         {isLoading ? (
           <>
             <Spinner />
-            正在验证……
+            正在验证…
           </>
         ) : (
-          "通过Cookie登入"
+          "验证并登录"
         )}
       </Button>
-
-      <div className="rounded-lg bg-muted p-3">
-        <p className="text-xs leading-relaxed text-muted-foreground">
-          <strong className="text-foreground">如何获得 Cookie：</strong>
-          <br />
-          1. 在浏览器中登入哔哩哔哩网站
-          <br />
-          2. 打开 Developer Tools (F12)
-          <br />
-          3. 找到网络请求
-          <br />
-          4. 复制以 "api.bilibili.com" 域请求的 Cookie 字段内容
-        </p>
-      </div>
     </form>
   );
 }

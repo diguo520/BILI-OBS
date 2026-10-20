@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import {
   Award,
   Medal,
   Message,
   Send,
   Sparkles,
+  Settings,
   TransparencyIcon,
   Trophy,
   Users,
@@ -13,6 +14,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { PhysicalPosition, PhysicalSize } from "@tauri-apps/api/dpi";
 import { emit } from "@tauri-apps/api/event";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +29,20 @@ import { useWsStore } from "@/store/ws";
 import type { Comment } from "@/types/comment";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
+import {
+  getAutoScrollPreference,
+  setAutoScrollPreference,
+} from "@/utils/preferences";
+import { getMessageStyle, getNameStyle } from "@/lib/comment-style";
+import {
+  DEFAULT_COMMENT_STYLE,
+  type CommentStyleConfig,
+} from "@/types/config";
+import { CommentStyleEditor } from "@/components/comment-style-editor";
+import {
+  broadcastCommentStyle,
+  useCommentStyleSync,
+} from "@/utils/comment-style-sync";
 
 type Feed = "comments" | "superchats" | "audience";
 
@@ -37,12 +53,26 @@ async function dockCommentsWindow() {
   await getCurrentWindow().hide();
 }
 
-function CommentRow({ comment }: { comment: Comment }) {
+function CommentRow({
+  comment,
+  style,
+  selfUid,
+}: {
+  comment: Comment;
+  style: CommentStyleConfig;
+  selfUid: number;
+}) {
   if (comment.type === "enter") {
     return (
       <div className="px-3 py-1.5 text-xs text-muted-foreground">
-        <span className="font-medium text-primary">{comment.username}</span>{" "}
-        {comment.message}
+        <span
+          className="font-medium"
+          style={getNameStyle(comment, style, selfUid)}>
+          {comment.username}
+        </span>{" "}
+        <span style={getMessageStyle(comment, style, selfUid)}>
+          {comment.message}
+        </span>
       </div>
     );
   }
@@ -50,9 +80,15 @@ function CommentRow({ comment }: { comment: Comment }) {
   if (comment.type === "gift") {
     return (
       <div className="mx-2 my-1 rounded-md border border-primary/15 bg-primary/10 px-2.5 py-2 text-sm">
-        <span className="font-medium text-primary">{comment.username}</span>
+        <span
+          className="font-medium"
+          style={getNameStyle(comment, style, selfUid)}>
+          {comment.username}
+        </span>
         <span className="text-muted-foreground"> 送出 </span>
-        {comment.giftName} x{comment.giftCount}
+        <span style={getMessageStyle(comment, style, selfUid)}>
+          {comment.giftName} x{comment.giftCount}
+        </span>
       </div>
     );
   }
@@ -67,7 +103,9 @@ function CommentRow({ comment }: { comment: Comment }) {
       </Avatar>
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-2">
-          <span className="min-w-0 truncate text-xs font-medium text-primary">
+          <span
+            className="min-w-0 truncate text-xs font-medium"
+            style={getNameStyle(comment, style, selfUid)}>
             {comment.username}
           </span>
           <time className="ml-auto shrink-0 text-[10px] text-muted-foreground">
@@ -77,7 +115,9 @@ function CommentRow({ comment }: { comment: Comment }) {
             })}
           </time>
         </div>
-        <p className="text-sm leading-5 wrap-break-word text-foreground">
+        <p
+          className="leading-5 wrap-break-word"
+          style={getMessageStyle(comment, style, selfUid)}>
           {comment.message}
         </p>
       </div>
@@ -85,7 +125,15 @@ function CommentRow({ comment }: { comment: Comment }) {
   );
 }
 
-function SuperChatRow({ comment }: { comment: Comment }) {
+function SuperChatRow({
+  comment,
+  style,
+  selfUid,
+}: {
+  comment: Comment;
+  style: CommentStyleConfig;
+  selfUid: number;
+}) {
   return (
     <div className="mx-2 my-2 overflow-hidden rounded-md border border-amber-400/35 bg-amber-400/10">
       <div className="flex items-center gap-2 border-b border-amber-400/20 px-2.5 py-2">
@@ -95,14 +143,18 @@ function SuperChatRow({ comment }: { comment: Comment }) {
             {comment.username.slice(0, 2).toUpperCase()}
           </AvatarFallback>
         </Avatar>
-        <span className="min-w-0 flex-1 truncate text-xs font-semibold">
+        <span
+          className="min-w-0 flex-1 truncate text-xs font-semibold"
+          style={getNameStyle(comment, style, selfUid)}>
           {comment.username}
         </span>
         <Badge className="border-0 bg-amber-500 text-white">
           ¥{comment.amount || 0}
         </Badge>
       </div>
-      <p className="px-2.5 py-2 text-sm leading-5 wrap-break-word">
+      <p
+        className="px-2.5 py-2 leading-5 wrap-break-word"
+        style={getMessageStyle(comment, style, selfUid)}>
         {comment.message}
       </p>
     </div>
@@ -111,8 +163,9 @@ function SuperChatRow({ comment }: { comment: Comment }) {
 
 export function FloatingComments() {
   const [feed, setFeed] = useState<Feed>("comments");
-  const [autoScroll, setAutoScroll] = useState(true);
+  const [autoScroll, setAutoScroll] = useState(getAutoScrollPreference);
   const [showOpacity, setShowOpacity] = useState(false);
+  const [showStyle, setShowStyle] = useState(false);
   const [opacity, setOpacity] = useState(() => {
     const savedOpacity = Number(localStorage.getItem(OPACITY_STORAGE_KEY));
     return savedOpacity >= 0 && savedOpacity <= 100 ? savedOpacity : 80;
@@ -120,8 +173,60 @@ export function FloatingComments() {
   const [newMessage, setNewMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const originalBounds = useRef<{
+    width: number;
+    height: number;
+    x: number;
+    y: number;
+  } | null>(null);
   const attemptedCredentials = useRef<string | null>(null);
   const config = useConfigStore((state) => state.config);
+  const updateConfig = useConfigStore((state) => state.updateConfig);
+  const commentStyle = config.commentStyle ?? DEFAULT_COMMENT_STYLE;
+  useCommentStyleSync((next) => updateConfig({ commentStyle: next }));
+
+  const handleStyleChange = (next: CommentStyleConfig) => {
+    updateConfig({ commentStyle: next });
+    broadcastCommentStyle(next);
+  };
+
+  const toggleStylePanel = async () => {
+    const win = getCurrentWindow();
+    if (!showStyle) {
+      const [size, position] = await Promise.all([
+        win.innerSize(),
+        win.outerPosition(),
+      ]);
+      originalBounds.current = {
+        width: size.width,
+        height: size.height,
+        x: position.x,
+        y: position.y,
+      };
+      await win.setSize(new PhysicalSize(size.width + 340, size.height));
+      await win.setPosition(
+        new PhysicalPosition(Math.max(0, position.x - 340), position.y),
+      );
+      setShowStyle(true);
+    } else {
+      setShowStyle(false);
+      const original = originalBounds.current;
+      if (original) {
+        await win.setSize(new PhysicalSize(original.width, original.height));
+        await win.setPosition(new PhysicalPosition(original.x, original.y));
+      }
+    }
+  };
+
+  const styleSample: Comment = {
+    id: "style-preview",
+    username: config.username || "波坤大叔",
+    uid: config.uid,
+    message: "弹幕样式预览，修改会立即生效。",
+    timestamp: new Date(),
+    type: "chat",
+    level: 30,
+  };
   const reloadConfig = useConfigStore((state) => state.init);
   const { connected, connecting, connect } = useWsStore((state) => state);
   const comments = useWsStore((state) => state.regularMessages);
@@ -215,10 +320,14 @@ export function FloatingComments() {
 
   return (
     <div
-      className="relative flex h-screen flex-col overflow-hidden rounded-lg border border-white/15 text-foreground shadow-xl backdrop-blur-sm"
+      className={cn(
+        "relative flex h-screen flex-col overflow-hidden rounded-lg border border-white/15 text-foreground shadow-xl backdrop-blur-sm",
+        showStyle && "pr-[340px]",
+      )}
       style={{
         backgroundColor: `color-mix(in oklch, var(--background) ${opacity}%, transparent)`,
-      }}>
+        "--window-opacity": `${opacity}%`,
+      } as CSSProperties}>
       <header
         data-tauri-drag-region
         className="flex h-11 shrink-0 items-center gap-2 border-b border-white/10 bg-card/45 px-2">
@@ -240,6 +349,15 @@ export function FloatingComments() {
         </span>
         <div className="ml-auto flex items-center gap-0.5">
           <Button
+            title="弹幕样式"
+            aria-label="弹幕样式"
+            variant="ghost"
+            size="icon"
+            className={cn("size-7 rounded-sm", showStyle && "text-primary")}
+            onClick={() => void toggleStylePanel()}>
+            <HugeiconsIcon icon={Settings} />
+          </Button>
+          <Button
             title="调整透明度"
             aria-label="调整透明度"
             variant="ghost"
@@ -254,7 +372,12 @@ export function FloatingComments() {
             variant="ghost"
             size="icon"
             className={cn("size-7 rounded-sm", autoScroll && "text-primary")}
-            onClick={() => setAutoScroll((value) => !value)}>
+            onClick={() =>
+              setAutoScroll((value) => {
+                setAutoScrollPreference(!value);
+                return !value;
+              })
+            }>
             <HugeiconsIcon icon={VerticalScrollPointIcon} />
           </Button>
           <Button
@@ -284,6 +407,26 @@ export function FloatingComments() {
             max={100}
             step={5}
             onValueChange={(value) => setOpacity(value[0])}
+          />
+        </div>
+      )}
+
+      {showStyle && (
+        <div className="themed-scrollbar absolute top-0 right-0 z-30 h-full w-[340px] overflow-y-auto border-l border-white/10 bg-popover p-3 text-popover-foreground">
+          <div className="mb-2 flex items-center">
+            <span className="text-[11px] font-medium">弹幕样式</span>
+            <button
+              className="ml-auto text-muted-foreground hover:text-foreground"
+              onClick={() => setShowStyle(false)}
+              aria-label="关闭弹幕样式设置">
+              <HugeiconsIcon icon={X} className="size-3.5" />
+            </button>
+          </div>
+          <CommentStyleEditor
+            style={commentStyle}
+            onChange={handleStyleChange}
+            sample={styleSample}
+            selfUid={config.uid}
           />
         </div>
       )}
@@ -324,7 +467,9 @@ export function FloatingComments() {
         </button>
       </div>
 
-      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto py-1">
+      <div
+        ref={scrollRef}
+        className="themed-scrollbar min-h-0 flex-1 overflow-y-auto py-1">
         {feed === "audience" ? (
           rankLoading ? (
             <div className="flex h-full items-center justify-center">
@@ -388,11 +533,21 @@ export function FloatingComments() {
           </div>
         ) : feed === "comments" ? (
           comments.map((comment) => (
-            <CommentRow key={comment.id} comment={comment} />
+            <CommentRow
+              key={comment.id}
+              comment={comment}
+              style={config.commentStyle}
+              selfUid={config.uid}
+            />
           ))
         ) : (
           superChats.map((comment) => (
-            <SuperChatRow key={comment.id} comment={comment} />
+            <SuperChatRow
+              key={comment.id}
+              comment={comment}
+              style={config.commentStyle}
+              selfUid={config.uid}
+            />
           ))
         )}
       </div>

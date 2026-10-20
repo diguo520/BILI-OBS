@@ -4,7 +4,12 @@ mod utils;
 
 use crate::commands::{comment_connect, comment_disconnect, comment_is_connected};
 use std::sync::Arc;
-use tauri::{Manager, PhysicalPosition, RunEvent, WindowEvent};
+use std::path::PathBuf;
+use tauri::{
+    menu::{Menu, MenuItem},
+    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+    AppHandle, Manager, PhysicalPosition, RunEvent, WindowEvent,
+};
 use tokio::sync::Mutex;
 
 pub struct ConnectionState {
@@ -13,8 +18,43 @@ pub struct ConnectionState {
 
 pub type AppState = Arc<Mutex<ConnectionState>>;
 
+fn show_main_window(app: &AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.show();
+        let _ = window.unminimize();
+        let _ = window.set_focus();
+    }
+}
+
+fn portable_data_dir() -> PathBuf {
+    let base = std::env::current_exe()
+        .ok()
+        .and_then(|path| path.parent().map(|parent| parent.to_path_buf()))
+        .or_else(|| std::env::current_dir().ok())
+        .unwrap_or_default();
+    base.join("_User Data")
+}
+
+fn ensure_portable_data_dir() -> PathBuf {
+    let dir = portable_data_dir();
+    let _ = std::fs::create_dir_all(dir.join("WebView2"));
+    dir
+}
+
+#[tauri::command]
+fn get_data_dir(_app: AppHandle) -> Result<String, String> {
+    Ok(ensure_portable_data_dir().display().to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Keep both app config and WebView2 cache next to the executable.
+    let data_dir = ensure_portable_data_dir();
+    std::env::set_var(
+        "WEBVIEW2_USER_DATA_FOLDER",
+        data_dir.join("WebView2"),
+    );
+
     let app = tauri::Builder::default()
         .manage(AppState::new(Mutex::new(ConnectionState { handle: None })))
         .plugin(tauri_plugin_fs::init())
@@ -34,12 +74,43 @@ pub fn run() {
                     window.set_position(PhysicalPosition::new(x, y))?;
                 }
             }
+
+            let show_item =
+                MenuItem::with_id(app, "show", "显示 BILI OBS", true, None::<&str>)?;
+            let quit_item = MenuItem::with_id(app, "quit", "退出", true, None::<&str>)?;
+            let menu = Menu::with_items(app, &[&show_item, &quit_item])?;
+
+            let mut tray_builder = TrayIconBuilder::with_id("bili-obs-tray")
+                .menu(&menu)
+                .tooltip("BILI OBS")
+                .show_menu_on_left_click(false)
+                .on_menu_event(|app, event| match event.id.as_ref() {
+                    "show" => show_main_window(app),
+                    "quit" => app.exit(0),
+                    _ => {}
+                })
+                .on_tray_icon_event(|tray, event| {
+                    if let TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        ..
+                    } = event
+                    {
+                        show_main_window(tray.app_handle());
+                    }
+                });
+
+            if let Some(icon) = app.default_window_icon() {
+                tray_builder = tray_builder.icon(icon.clone());
+            }
+            app.manage(tray_builder.build(app)?);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             comment_connect,
             comment_disconnect,
-            comment_is_connected
+            comment_is_connected,
+            get_data_dir
         ])
         .build(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -47,10 +118,14 @@ pub fn run() {
     app.run(move |_app_handle, _event| match &_event {
         RunEvent::WindowEvent {
             label,
-            event: WindowEvent::CloseRequested { .. },
+            event: WindowEvent::CloseRequested { api, .. },
             ..
         } if label == "main" => {
-            _app_handle.exit(0);
+            // 关闭主窗口时留在托盘，避免误关导致直播中断。
+            api.prevent_close();
+            if let Some(window) = _app_handle.get_webview_window("main") {
+                let _ = window.hide();
+            }
         }
         RunEvent::ExitRequested { .. } => {
             let app_state = _app_handle.state::<AppState>();

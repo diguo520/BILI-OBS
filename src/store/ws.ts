@@ -93,20 +93,36 @@ export const useWsStore = create<WsState>((set) => ({
         const obj = JSON.parse(payload);
         switch (obj["cmd"]) {
           case "DANMU_MSG":
+            {
+              const rawUser = obj["info"]?.[0]?.[15]?.user ?? {};
+              const base = rawUser.base ?? {};
+              const uid = Number(rawUser.uid ?? obj["info"]?.[0]?.[15]?.uid ?? 0);
+              const guardLevel = Number(
+                rawUser.guard?.level ?? obj["info"]?.[7] ?? 0,
+              );
+              const level = Number(
+                rawUser.level ?? obj["info"]?.[2]?.[0] ?? 0,
+              );
+              const isAdmin = Number(obj["info"]?.[2]?.[2] ?? 0) === 1;
             set((state) => ({
               messageId: state.messageId++,
               regularMessages: [
                 ...state.regularMessages,
                 {
                   id: String(state.messageId),
-                  username: obj["info"][0][15]["user"]["base"]["name"],
+                  username: base.name ?? "",
                   message: obj["info"][1],
                   timestamp: new Date(),
                   type: "chat",
-                  avatar: obj["info"][0][15]["user"]["base"]["face"],
+                  avatar: base.face,
+                  uid,
+                  level,
+                  guardLevel,
+                  isAdmin,
                 },
               ],
             }));
+            }
             break;
           case "WATCHED_CHANGE":
             set(() => ({
@@ -127,6 +143,8 @@ export const useWsStore = create<WsState>((set) => ({
                   message: "进入直播间",
                   timestamp: new Date(),
                   type: "enter",
+                  uid: Number(pbObj.uid),
+                  guardLevel: pbObj.guardLevel ?? 0,
                 },
               ],
             }));
@@ -151,6 +169,12 @@ export const useWsStore = create<WsState>((set) => ({
                   type: "gift",
                   giftName: obj["data"]["giftName"],
                   giftCount: obj["data"]["num"],
+                  uid: Number(obj["data"]["uid"] ?? 0),
+                  guardLevel: Number(
+                    obj["data"]["guard_level"] ??
+                      obj["data"]["medal_info"]?.guard_level ??
+                      0,
+                  ),
                 },
               ],
             }));
@@ -168,6 +192,10 @@ export const useWsStore = create<WsState>((set) => ({
                   timestamp: new Date(),
                   amount: obj["data"]["price"],
                   type: "superchat",
+                  uid: Number(obj["data"]["uid"] ?? 0),
+                  guardLevel: Number(
+                    obj["data"]["user_info"]?.guard_level ?? 0,
+                  ),
                 },
               ],
             }));

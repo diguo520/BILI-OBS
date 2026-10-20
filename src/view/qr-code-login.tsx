@@ -5,6 +5,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { getLoginQrcode, pollQrCodeStatus } from "@/api/passport";
 import { Spinner } from "@/components/ui/spinner";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { cn } from "@/lib/utils";
 
 interface QRCodeLoginProps {
   onLoginSuccess: () => void;
@@ -18,13 +19,17 @@ type QRStatus =
   | "expired"
   | "error";
 
+const QR_TTL = 180;
+
 export function QRCodeLogin({ onLoginSuccess }: QRCodeLoginProps) {
   const [qrStatus, setQrStatus] = useState<QRStatus>("loading");
-  const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
-  const [qrCodeKey, setQrCodeKey] = useState<string>("");
+  const [qrCodeUrl, setQrCodeUrl] = useState("");
+  const [qrCodeKey, setQrCodeKey] = useState("");
+  const [remaining, setRemaining] = useState(QR_TTL);
 
   const generateQRCode = useCallback(async () => {
     setQrStatus("loading");
+    setRemaining(QR_TTL);
     try {
       const qrcode = await getLoginQrcode();
       setQrCodeUrl(qrcode.url);
@@ -35,10 +40,12 @@ export function QRCodeLogin({ onLoginSuccess }: QRCodeLoginProps) {
       setQrStatus("error");
     }
   }, []);
+
   useEffect(() => {
+    // 首次进入登录页时生成二维码
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     generateQRCode();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [generateQRCode]);
 
   useEffect(() => {
     if (qrStatus !== "pending" && qrStatus !== "scanned") return;
@@ -66,86 +73,67 @@ export function QRCodeLogin({ onLoginSuccess }: QRCodeLoginProps) {
       }
     }, 1000);
 
-    const expireTimeout = setTimeout(() => {
-      if (qrStatus === "pending") {
-        setQrStatus("expired");
-        clearInterval(pollInterval);
-      }
-    }, 180000);
-
-    return () => {
-      clearInterval(pollInterval);
-      clearTimeout(expireTimeout);
-    };
+    return () => clearInterval(pollInterval);
   }, [qrStatus, qrCodeKey, onLoginSuccess]);
 
-  const getStatusMessage = () => {
-    switch (qrStatus) {
-      case "loading":
-        return "生成二维码中…";
-      case "pending":
-        return "请使用哔哩哔哩 App 扫码";
-      case "scanned":
-        return "已扫码，请在手机上确认登入";
-      case "confirmed":
-        return "登入成功！";
-      case "expired":
-        return "二维码已失效";
-      case "error":
-        return "发生错误";
-    }
-  };
+  useEffect(() => {
+    if (qrStatus !== "pending" && qrStatus !== "scanned") return;
+    const timer = setInterval(() => {
+      setRemaining((value) => {
+        if (value <= 1) {
+          setQrStatus("expired");
+          return 0;
+        }
+        return value - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [qrStatus]);
 
-  const getStatusIcon = () => {
-    switch (qrStatus) {
-      case "loading":
-        return <Spinner />;
-      case "scanned":
-        return <Spinner className="text-primary" />;
-      case "confirmed":
-        return <HugeiconsIcon icon={CheckCircle} className="text-primary" />;
-      case "expired":
-      case "error":
-        return <HugeiconsIcon icon={XCircle} className="text-destructive" />;
-      default:
-        return null;
-    }
-  };
+  const statusText =
+    qrStatus === "loading"
+      ? "生成二维码中…"
+      : qrStatus === "pending"
+        ? "等待扫码"
+        : qrStatus === "scanned"
+          ? "已扫码，请在手机上确认"
+          : qrStatus === "confirmed"
+            ? "登录成功"
+            : qrStatus === "expired"
+              ? "二维码已失效"
+              : "二维码加载失败";
+
+  const minutes = Math.floor(remaining / 60);
+  const seconds = remaining % 60;
 
   return (
-    <div className="space-y-4">
-      <div className="relative mx-auto aspect-square w-full max-w-50 overflow-hidden rounded-xl border border-border bg-card">
+    <div className="space-y-3">
+      <div className="relative mx-auto flex size-[168px] items-center justify-center overflow-hidden rounded-xl bg-white p-2">
         {qrStatus === "loading" ? (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Spinner className="h-8 w-8 text-muted-foreground" />
-          </div>
+          <Spinner className="size-7 text-muted-foreground" />
         ) : qrStatus === "expired" || qrStatus === "error" ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-card/95">
+          <div className="flex flex-col items-center gap-2">
             <HugeiconsIcon
               icon={XCircle}
-              className="h-8 w-8 text-destructive"
+              className="size-7 text-destructive"
             />
             <Button
               variant="link"
               size="sm"
               onClick={generateQRCode}
-              className="gap-1.5">
-              <HugeiconsIcon icon={RefreshCw} className="h-3.5 w-3.5" />
-              刷新
+              className="h-auto gap-1 p-0 text-[11px]">
+              <HugeiconsIcon icon={RefreshCw} className="size-3.5" />
+              刷新二维码
             </Button>
           </div>
         ) : (
           <>
-            <div className="absolute inset-4 rounded-lg bg-foreground p-2">
-              <div className="h-full w-full gap-0.5 rounded bg-background p-2">
-                <QRCodeSVG size={135} value={qrCodeUrl} />
-              </div>
-            </div>
+            <QRCodeSVG size={152} value={qrCodeUrl} />
             {qrStatus === "scanned" && (
-              <div className="absolute inset-0 flex items-center justify-center bg-card/80">
+              <div className="absolute inset-0 flex items-center justify-center bg-white/85">
                 <HugeiconsIcon
                   icon={CheckCircle}
-                  className="h-12 w-12 text-primary"
+                  className="size-10 text-success"
                 />
               </div>
             )}
@@ -153,21 +141,51 @@ export function QRCodeLogin({ onLoginSuccess }: QRCodeLoginProps) {
         )}
       </div>
 
-      <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-        {getStatusIcon()}
-        <span>{getStatusMessage()}</span>
+      <div className="flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground">
+        <span
+          className={cn(
+            "size-1.5 rounded-full",
+            qrStatus === "scanned"
+              ? "bg-success"
+              : qrStatus === "expired" || qrStatus === "error"
+                ? "bg-destructive"
+                : "bg-warning",
+          )}
+        />
+        <span>{statusText}</span>
+        {(qrStatus === "pending" || qrStatus === "scanned") && (
+          <span className="tabular-nums text-muted-foreground/70">
+            · {minutes}:{String(seconds).padStart(2, "0")}
+          </span>
+        )}
+      </div>
+
+      <div className="rounded-lg border border-border bg-muted/40 px-3 py-2.5">
+        <Step index="1" text="打开哔哩哔哩 App，进入右上角扫一扫" />
+        <Step index="2" text="扫描上方二维码" />
+        <Step index="3" text="在手机上确认登录，本页会自动继续" />
       </div>
 
       {(qrStatus === "pending" || qrStatus === "scanned") && (
-        <Button variant="secondary" onClick={generateQRCode} className="w-full">
-          <HugeiconsIcon icon={RefreshCw} className="mr-2 h-4 w-4" />
+        <Button
+          variant="outline"
+          onClick={generateQRCode}
+          className="h-8 w-full rounded-lg text-[11.5px]">
+          <HugeiconsIcon icon={RefreshCw} className="size-3.5" />
           刷新二维码
         </Button>
       )}
+    </div>
+  );
+}
 
-      <p className="text-center text-xs text-muted-foreground">
-        打开您的哔哩哔哩 App 并扫描此二维码登入。
-      </p>
+function Step({ index, text }: { index: string; text: string }) {
+  return (
+    <div className="flex items-start gap-2 py-0.5 text-[10.5px] leading-relaxed text-muted-foreground">
+      <span className="mt-px flex size-4 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[9px] font-semibold text-primary">
+        {index}
+      </span>
+      {text}
     </div>
   );
 }

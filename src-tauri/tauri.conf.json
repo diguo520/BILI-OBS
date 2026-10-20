@@ -1,8 +1,9 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Bili Live Hime",
-  "version": "0.5.4",
-  "identifier": "com.rsplwe.bili-live-hime",
+  "productName": "BILI OBS",
+  "version": "0.1.0",
+  "identifier": "com.biliobs.app",
+  "mainBinaryName": "BILI OBS",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -13,7 +14,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "哔哩哔哩直播姬（仮）",
+        "title": "BILI OBS",
         "width": 900,
         "height": 600,
         "minWidth": 900,

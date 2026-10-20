@@ -83,7 +83,7 @@ export function LoadingScreen({ onValidationComplete }: LoadingScreenProps) {
     <div className="flex flex-1 items-center justify-center p-8">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
-          <CardTitle className="text-lg">哔哩哔哩直播姬（仮）</CardTitle>
+          <CardTitle className="text-lg">BILI OBS</CardTitle>
           <CardDescription>初始化应用</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col items-center gap-4">

@@ -24,13 +24,19 @@ import { getContributionRank, sendComment } from "@/api/live";
 import { LoadingButton } from "@/components/loading-button";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { VirtualScrollArea } from "@/components/virtual-scroll-area";
 import { useQuery } from "@tanstack/react-query";
 import { Spinner } from "@/components/ui/spinner";
 import { useWsStore } from "@/store/ws";
 import { useConfigStore } from "@/store/config";
+import {
+  getAutoScrollPreference,
+  setAutoScrollPreference,
+} from "@/utils/preferences";
+import { getMessageStyle, getNameStyle } from "@/lib/comment-style";
+import { DEFAULT_COMMENT_STYLE } from "@/types/config";
+import { useCommentStyleSync } from "@/utils/comment-style-sync";
 
 const intToHexColor = (color: number) =>
   `#${color.toString(16).padStart(6, "0")}`;
@@ -41,7 +47,7 @@ interface LiveCommentsProps {
 
 export function LiveComments({ onDetach }: LiveCommentsProps = {}) {
   const [newMessage, setNewMessage] = useState("");
-  const [autoScroll, setAutoScroll] = useState(true);
+  const [autoScroll, setAutoScroll] = useState(getAutoScrollPreference);
   const [activeTab, setActiveTab] = useState<"all" | "superchat" | "audience">(
     "all",
   );
@@ -63,6 +69,11 @@ export function LiveComments({ onDetach }: LiveCommentsProps = {}) {
   const superChatComments = useWsStore((s) => s.superChats);
   const regularComments = useWsStore((s) => s.regularMessages);
   const { uid, roomId, roomToken } = useConfigStore((s) => s.config);
+  const commentStyle = useConfigStore(
+    (s) => s.config.commentStyle ?? DEFAULT_COMMENT_STYLE,
+  );
+  const updateConfig = useConfigStore((s) => s.updateConfig);
+  useCommentStyleSync((next) => updateConfig({ commentStyle: next }));
 
   const handleSendMessage = async () => {
     try {
@@ -105,8 +116,12 @@ export function LiveComments({ onDetach }: LiveCommentsProps = {}) {
         <div
           key={comment.id}
           className="px-2 py-1 text-xs text-muted-foreground">
-          <span className="text-primary">{comment.username}</span>{" "}
-          {comment.message}
+          <span style={getNameStyle(comment, commentStyle, uid)}>
+            {comment.username}
+          </span>{" "}
+          <span style={getMessageStyle(comment, commentStyle, uid)}>
+            {comment.message}
+          </span>
         </div>
       );
     }
@@ -118,9 +133,13 @@ export function LiveComments({ onDetach }: LiveCommentsProps = {}) {
           className="my-1 flex items-center gap-2 rounded-lg bg-primary/10 px-3 py-2">
           <HugeiconsIcon icon={Gift} className="text-primary" />
           <span className="text-sm">
-            <span className="font-medium text-primary">{comment.username}</span>
+            <span
+              className="font-medium"
+              style={getNameStyle(comment, commentStyle, uid)}>
+              {comment.username}
+            </span>
             <span className="text-muted-foreground"> 送出 </span>
-            <span className="font-medium">
+            <span className="font-medium" style={getMessageStyle(comment, commentStyle, uid)}>
               {comment.giftName} x{comment.giftCount}
             </span>
           </span>
@@ -140,7 +159,9 @@ export function LiveComments({ onDetach }: LiveCommentsProps = {}) {
         </Avatar>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
-            <span className="truncate text-sm font-medium text-primary">
+            <span
+              className="truncate text-sm font-medium"
+              style={getNameStyle(comment, commentStyle, uid)}>
               {comment.username}
             </span>
             {comment.badge && (
@@ -155,7 +176,9 @@ export function LiveComments({ onDetach }: LiveCommentsProps = {}) {
               })}
             </span>
           </div>
-          <p className="text-sm wrap-break-word text-foreground">
+          <p
+            className="wrap-break-word"
+            style={getMessageStyle(comment, commentStyle, uid)}>
             {comment.message}
           </p>
         </div>
@@ -177,7 +200,11 @@ export function LiveComments({ onDetach }: LiveCommentsProps = {}) {
                 {comment.username.slice(0, 2).toUpperCase()}
               </AvatarFallback>
             </Avatar>
-            <span className="text-sm font-bold">{comment.username}</span>
+            <span
+              className="text-sm font-bold"
+              style={getNameStyle(comment, commentStyle, uid)}>
+              {comment.username}
+            </span>
             <Badge
               className={`bg-linear-to-r ${bgColor} border-0 text-xs text-white`}>
               ¥{comment.amount || 0}
@@ -189,7 +216,11 @@ export function LiveComments({ onDetach }: LiveCommentsProps = {}) {
               })}
             </span>
           </div>
-          <p className="text-sm font-medium">{comment.message}</p>
+          <p
+            className="text-sm font-medium"
+            style={getMessageStyle(comment, commentStyle, uid)}>
+            {comment.message}
+          </p>
         </div>
       </div>
     );
@@ -259,25 +290,56 @@ export function LiveComments({ onDetach }: LiveCommentsProps = {}) {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <Label className="text-xl">直播弹幕</Label>
-        <div className="flex items-center gap-2">
+    <div className="flex h-full flex-col gap-3">
+      <div className="flex items-end gap-2.5">
+        <div>
+          <h1 className="text-[19px] font-semibold tracking-tight">弹幕</h1>
+          <p className="mt-0.5 text-[11.5px] text-muted-foreground">
+            实时接收直播间消息与醒目留言
+          </p>
+        </div>
+        <div className="ml-auto flex items-center gap-2">
+          <span
+            className={`inline-flex h-6 items-center gap-1.5 rounded-full border px-2.5 text-[10.5px] ${
+              connected
+                ? "border-success/30 bg-success/10 text-success"
+                : "border-border bg-card text-muted-foreground"
+            }`}>
+            <span
+              className={`size-1.5 rounded-full ${
+                connected ? "bg-success" : "bg-muted-foreground/60"
+              }`}
+            />
+            {connected ? "已连接" : "未连接"}
+          </span>
           {onDetach && (
-            <Button variant="outline" onClick={onDetach}>
-              <HugeiconsIcon icon={ArrowUpRight} />
-              拆分
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 rounded-lg text-[11px]"
+              onClick={onDetach}>
+              <HugeiconsIcon icon={ArrowUpRight} className="size-3.5" />
+              拆分悬浮窗
             </Button>
           )}
-          <Badge variant="outline">{regularComments.length} 条弹幕</Badge>
           <Button
-            variant={autoScroll ? "default" : "outline"}
-            onClick={() => setAutoScroll(!autoScroll)}>
-            <HugeiconsIcon icon={VerticalScrollPointIcon} />
+            variant={autoScroll ? "secondary" : "ghost"}
+            size="sm"
+            className="h-7 rounded-lg text-[11px]"
+            onClick={() => {
+              setAutoScroll(!autoScroll);
+              setAutoScrollPreference(!autoScroll);
+            }}>
+            <HugeiconsIcon
+              icon={VerticalScrollPointIcon}
+              className="size-3.5"
+            />
             自动滚动 {autoScroll ? "开" : "关"}
           </Button>
           <Button
-            variant={connected ? "default" : "outline"}
+            variant={connected ? "ghost" : "default"}
+            size="sm"
+            className="h-7 rounded-lg text-[11px]"
             disabled={connecting}
             onClick={async () => {
               if (!connected) {
@@ -295,12 +357,12 @@ export function LiveComments({ onDetach }: LiveCommentsProps = {}) {
               <>
                 {!connected ? (
                   <>
-                    <HugeiconsIcon icon={Link} />
+                    <HugeiconsIcon icon={Link} className="size-3.5" />
                     连接
                   </>
                 ) : (
                   <>
-                    <HugeiconsIcon icon={Unlink} />
+                    <HugeiconsIcon icon={Unlink} className="size-3.5" />
                     断开
                   </>
                 )}
@@ -314,16 +376,17 @@ export function LiveComments({ onDetach }: LiveCommentsProps = {}) {
         value={activeTab}
         onValueChange={(v) =>
           setActiveTab(v as "all" | "superchat" | "audience")
-        }>
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="all" className="gap-1 px-2 text-xs">
+        }
+        className="flex min-h-0 flex-1 flex-col">
+        <TabsList className="grid h-8 w-fit grid-cols-3 rounded-lg border border-border bg-card p-[3px]">
+          <TabsTrigger value="all" className="h-6 gap-1 rounded-md px-3 text-[11px]">
             <HugeiconsIcon icon={Message} className="h-3.5 w-3.5" />
             弹幕
             <Badge variant="secondary" className="ml-0.5 h-4 px-1 text-xs">
               {regularComments.length}
             </Badge>
           </TabsTrigger>
-          <TabsTrigger value="superchat" className="gap-1 px-2 text-xs">
+          <TabsTrigger value="superchat" className="h-6 gap-1 rounded-md px-3 text-[11px]">
             <HugeiconsIcon icon={Sparkles} className="h-3.5 w-3.5" />
             醒目留言
             <Badge
@@ -332,14 +395,14 @@ export function LiveComments({ onDetach }: LiveCommentsProps = {}) {
               {superChatComments.length}
             </Badge>
           </TabsTrigger>
-          <TabsTrigger value="audience" className="gap-1 px-2 text-xs">
+          <TabsTrigger value="audience" className="h-6 gap-1 rounded-md px-3 text-[11px]">
             <HugeiconsIcon icon={Users} className="h-3.5 w-3.5" />
             在线榜
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="all" className="mt-4">
-          <div className="h-[calc(100vh-310px)] w-full">
+        <TabsContent value="all" className="mt-2 flex min-h-0 flex-1 flex-col">
+          <div className="min-h-0 w-full flex-1">
             <VirtualScrollArea
               autoScroll={autoScroll}
               items={regularComments}
@@ -348,15 +411,15 @@ export function LiveComments({ onDetach }: LiveCommentsProps = {}) {
           </div>
         </TabsContent>
 
-        <TabsContent value="superchat" className="mt-4">
-          <ScrollArea className="h-[calc(100vh-310px)] w-full rounded-md border">
+        <TabsContent value="superchat" className="mt-2 flex min-h-0 flex-1 flex-col">
+          <ScrollArea className="h-full min-h-0 w-full flex-1 rounded-lg border border-border">
             <div className="p-2">
               {superChatComments.map(renderSuperChatComment)}
             </div>
           </ScrollArea>
         </TabsContent>
-        <TabsContent value="audience" className="mt-4">
-          <ScrollArea className="h-[calc(100vh-310px)] w-full overflow-auto rounded-md border bg-background">
+        <TabsContent value="audience" className="mt-2 flex min-h-0 flex-1 flex-col">
+          <ScrollArea className="h-full min-h-0 w-full flex-1 rounded-lg border border-border bg-card">
             <div className="divide-y">
               {rank
                 // .sort((a, b) => b.score - a.score)

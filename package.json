@@ -1,10 +1,10 @@
 {
-  "name": "bili-live-hime",
+  "name": "bili-obs",
   "author": {
     "name": "Rsplwe",
     "email": "rsplwe@anon.tokyo"
   },
-  "version": "0.5.4",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",

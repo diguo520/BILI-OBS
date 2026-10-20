@@ -8,19 +8,20 @@ import { LoginScreen } from "@/screens/login-screen";
 import { LoadingScreen } from "@/screens/loading-screen";
 import { useConfigStore } from "@/store/config";
 import { Toaster } from "@/components/ui/sonner";
-import { UserProfile } from "@/view/user-profile";
 import { LiveRoomManager } from "@/view/manager/live-room-manager";
 import { useWsStore } from "./store/ws";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { FloatingComments } from "@/view/floating-comments";
 import { DetachedComments } from "@/view/detached-comments";
 import { listen } from "@tauri-apps/api/event";
+import { Overview } from "@/view/overview";
+import { DataCenter } from "@/view/data-center";
 
 type AuthState = "loading" | "login" | "authenticated";
 
 export default function App() {
   const isCommentsWindow = getCurrentWindow().label === "comments";
-  const [activeTab, setActiveTab] = useState<TabType>("account");
+  const [activeTab, setActiveTab] = useState<TabType>("overview");
   const [authState, setAuthState] = useState<AuthState>("loading");
   const [commentsDetached, setCommentsDetached] = useState(false);
 
@@ -85,23 +86,28 @@ export default function App() {
         return (
           <>
             <div className="flex flex-1 overflow-hidden">
-              <AppSidebar activeTab={activeTab} onTabChange={setActiveTab} />
-              <main className="flex-1 overflow-y-auto p-8">
-                <div className="mx-auto max-w-2xl">
-                  {activeTab === "account" && (
-                    <UserProfile onLogout={handleLogout} />
-                  )}
-                  {activeTab === "stream" && <LiveStreamSettings />}
-                  {activeTab === "comments" && (
-                    <DetachedComments
-                      detached={commentsDetached}
-                      onDetach={() => setCommentsDetached(true)}
-                      onDock={() => setCommentsDetached(false)}
-                    />
-                  )}
-                  {activeTab === "manager" && <LiveRoomManager />}
-                  {activeTab === "settings" && <MoreSettings />}
-                </div>
+              <AppSidebar
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+                onLogout={handleLogout}
+              />
+              <main className="themed-scrollbar flex-1 overflow-y-auto p-[18px]">
+                {activeTab === "overview" && (
+                  <Overview onNavigate={setActiveTab} />
+                )}
+                {activeTab === "stream" && <LiveStreamSettings />}
+                {activeTab === "comments" && (
+                  <DetachedComments
+                    detached={commentsDetached}
+                    onDetach={() => setCommentsDetached(true)}
+                    onDock={() => setCommentsDetached(false)}
+                  />
+                )}
+                {activeTab === "manager" && <LiveRoomManager />}
+                {activeTab === "data" && <DataCenter />}
+                {activeTab === "settings" && (
+                  <MoreSettings onLogout={handleLogout} />
+                )}
               </main>
             </div>
             <StatusBar />

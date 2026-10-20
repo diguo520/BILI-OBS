@@ -19,6 +19,9 @@
     "core:window:allow-hide",
     "core:window:allow-show",
     "core:window:allow-set-focus",
+    "core:window:allow-set-always-on-top",
+    "core:window:allow-set-size",
+    "core:window:allow-set-position",
     "http:default",
     {
       "identifier": "http:default",
@@ -28,6 +31,9 @@
         },
         {
           "url": "https://api.bilibili.com/*"
+        },
+        {
+          "url": "https://member.bilibili.com/*"
         },
         {
           "url": "https://api.live.bilibili.com/*"

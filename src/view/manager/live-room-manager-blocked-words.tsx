@@ -123,7 +123,7 @@ export function LiveRoomManagerBlockedWords() {
               <Badge
                 key={word}
                 variant="secondary"
-                className="gap-1 py-1.5 pr-1 pl-3 text-sm">
+                className="gap-1 rounded-md py-1 pr-1 pl-2.5 text-[11px]">
                 {word}
                 <button
                   onClick={() => handleRemoveBlockedWord(word)}
@@ -138,11 +138,11 @@ export function LiveRoomManagerBlockedWords() {
   };
   return (
     <>
-      <div className="space-y-3">
-        <Label>
+      <div className="shrink-0 space-y-2">
+        <Label className="text-[11px] text-muted-foreground">
           屏蔽词
-          <span className="text-xs text-muted-foreground">
-            包含屏蔽词的弹幕不会出现在直播中，屏蔽词不得超过15个字符数
+          <span className="text-[10px] text-muted-foreground/80">
+            包含屏蔽词的弹幕不会出现在列表中，单个词不超过 15 个字符
           </span>
         </Label>
 
@@ -152,23 +152,27 @@ export function LiveRoomManagerBlockedWords() {
             value={blockedWordInput}
             onChange={(e) => setBlockedWordInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleAddBlockedWord()}
+            className="h-9 rounded-lg text-[12px]"
           />
           <LoadingButton
             onClickAsync={handleAddBlockedWord}
+            className="h-9 rounded-lg"
             disabled={!blockedWordInput.trim()}>
-            添加
+            添加屏蔽词
           </LoadingButton>
         </div>
       </div>
 
-      <div className="space-y-3">
+      <div className="flex min-h-0 flex-1 flex-col gap-2">
         <div className="flex items-center justify-between">
-          <Label>屏蔽列表</Label>
+          <Label className="text-[11px] text-muted-foreground">屏蔽列表</Label>
           <Badge variant="secondary">
             {blockedWords.length} / {maxLimit}
           </Badge>
         </div>
-        <div className="min-h-37.5 rounded-md border p-4">{content()}</div>
+        <div className="min-h-[200px] flex-1 overflow-y-auto rounded-lg border border-border p-3">
+          {content()}
+        </div>
       </div>
     </>
   );

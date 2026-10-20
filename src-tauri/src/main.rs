@@ -1,6 +1,6 @@
-// Prevents additional console window on Windows in release, DO NOT REMOVE!!
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+// Never open a console window on Windows, including debug builds.
+#![cfg_attr(windows, windows_subsystem = "windows")]
 
 fn main() {
-    bili_live_hime_lib::run()
+    bili_obs_lib::run()
 }

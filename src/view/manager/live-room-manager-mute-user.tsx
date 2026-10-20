@@ -1,6 +1,13 @@
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-// import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useEffect, useRef, useState } from "react";
@@ -49,8 +56,7 @@ interface MutedUser {
 
 type Status = "loading" | "error" | "empty" | "success";
 
-// 目前无论传入何种值，结束时长均为永久。
-/* export type MuteDurationKey =
+export type MuteDurationKey =
   | "CURRENT"
   | "PERMANENT"
   | "HOUR_1"
@@ -70,7 +76,7 @@ const MUTE_DURATIONS: Record<MuteDurationKey, { label: string; hours: number }> 
   HOUR_48: { label: "48 小时", hours: 48 },
   HOUR_72: { label: "72 小时", hours: 72 },
   HOUR_168: { label: "168 小时", hours: 168 },
-};*/
+};
 
 export function LiveRoomManagerMuteUser() {
   const [state, setState] = useState<Status>("loading");
@@ -80,7 +86,8 @@ export function LiveRoomManagerMuteUser() {
   const [pendingUserList, setPendingUserList] = useState<UserSelectItem[]>([]);
   const [mutedUsers, setMutedUsers] = useState<MutedUser[]>([]);
   const [muteInput, setMuteInput] = useState("");
-  // const [muteDuration, setMuteDuration] = useState<MuteDurationKey>("CURRENT");
+  const [muteDuration, setMuteDuration] =
+    useState<MuteDurationKey>("CURRENT");
   const [pendingMute, setPendingMute] = useState<{
     id: string;
     username: string;
@@ -126,8 +133,10 @@ export function LiveRoomManagerMuteUser() {
   const confirmMuteUser = async () => {
     if (pendingMute) {
       try {
-        // await addSilentUser(pendingMute.id, String(MUTE_DURATIONS[muteDuration].hours));
-        await addSilentUser(pendingMute.id, String(-1));
+        await addSilentUser(
+          pendingMute.id,
+          String(MUTE_DURATIONS[muteDuration].hours),
+        );
         setMuteInput("");
         setPendingMute(null);
       } catch (e) {
@@ -218,26 +227,26 @@ export function LiveRoomManagerMuteUser() {
             {mutedUsers.map((user) => (
               <div
                 key={user.tuid}
-                className="flex items-center justify-between gap-4 p-3 hover:bg-muted/30">
+                className="flex items-center justify-between gap-4 px-1 py-2.5 hover:bg-muted/30">
                 <div className="flex items-start gap-3">
-                  <Avatar className="h-8 w-8">
+                  <Avatar className="size-7">
                     <AvatarImage src={user.face || "/akarin.webp"} />
-                    <AvatarFallback className="text-xs">
+                    <AvatarFallback className="text-[10px]">
                       {user.tname.slice(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div className="space-y-0.5">
-                    <p className="text-sm font-medium">
+                    <p className="text-[12px] font-medium">
                       {user.tname}{" "}
-                      <span className="text-muted-foreground">
-                        (UID: {user.tuid})
+                      <span className="text-[10.5px] text-muted-foreground">
+                        UID {user.tuid}
                       </span>
                     </p>
-                    <p className="flex items-center text-xs text-muted-foreground">
+                    <p className="flex items-center text-[10.5px] text-muted-foreground">
                       <HugeiconsIcon icon={Clock} className="mr-1 h-3 w-3" />
                       禁言至 {user.block_end_time}
                     </p>
-                    <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <p className="flex items-center gap-1 text-[10px] text-muted-foreground">
                       <HugeiconsIcon icon={UserX} className="h-3 w-3" />
                       {user.name}
                       <span className="mx-1">·</span>
@@ -262,18 +271,19 @@ export function LiveRoomManagerMuteUser() {
 
   return (
     <>
-      <div className="space-y-3">
-        <Label>禁言用户</Label>
+      <div className="shrink-0 space-y-2">
+        <Label className="text-[11px] text-muted-foreground">禁言用户</Label>
         <div className="flex gap-2">
           <Input
             placeholder="输入 UID 或用户名"
             value={muteInput}
             onChange={(e) => setMuteInput(e.target.value)}
-            className="flex-1"
+            className="h-9 flex-1 rounded-lg text-[12px]"
           />
-          {/* 保留实现
-          <Select value={muteDuration} onValueChange={(v) => setMuteDuration(v as MuteDurationKey)}>
-            <SelectTrigger className="w-30">
+          <Select
+            value={muteDuration}
+            onValueChange={(v) => setMuteDuration(v as MuteDurationKey)}>
+            <SelectTrigger className="h-9 w-[120px] rounded-lg text-[12px]">
               <SelectValue placeholder="选择禁言时间" />
             </SelectTrigger>
             <SelectContent>
@@ -286,20 +296,20 @@ export function LiveRoomManagerMuteUser() {
               </SelectGroup>
             </SelectContent>
           </Select>
-          */}
           <LoadingButton
             onClickAsync={handleMuteUser}
+            className="h-9 rounded-lg"
             disabled={!muteInput.trim()}>
             禁言
           </LoadingButton>
         </div>
       </div>
 
-      <div className="space-y-3">
+      <div className="flex min-h-0 flex-1 flex-col gap-2">
         <div className="flex items-center justify-between">
-          <Label>已禁言用户</Label>
+          <Label className="text-[11px] text-muted-foreground">已禁言用户</Label>
         </div>
-        <ScrollArea className="h-[calc(100vh-420px)] rounded-md border">
+        <ScrollArea className="h-[calc(100vh-370px)] rounded-lg border border-border">
           {content()}
         </ScrollArea>
       </div>
@@ -326,10 +336,9 @@ export function LiveRoomManagerMuteUser() {
                 {pendingMute?.username} (UID: {pendingMute?.id})
               </strong>{" "}
               吗？
-              {/*
               <br />
-              禁言时长： <strong>{MUTE_DURATIONS[muteDuration].label}</strong>
-              */}
+              禁言时长：
+              <strong>{MUTE_DURATIONS[muteDuration].label}</strong>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

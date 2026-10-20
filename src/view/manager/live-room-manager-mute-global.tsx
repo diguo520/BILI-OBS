@@ -17,6 +17,16 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { RefreshCw, XCircle, Clock } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { useCountdown } from "@/utils/countdown";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface GlobalMuteSettings {
   type: RoomSilentType;
@@ -31,6 +41,7 @@ export function LiveRoomManagerMuteGlobal() {
   const hasFetchedRef = useRef(false);
   const [state, setState] = useState<Status>("loading");
   const [enabled, setEnabled] = useState<boolean>(false);
+  const [confirmAllOpen, setConfirmAllOpen] = useState(false);
   const [globalMute, setGlobalMute] = useState<GlobalMuteSettings>({
     type: "off",
     wealthLevel: 1,
@@ -79,7 +90,7 @@ export function LiveRoomManagerMuteGlobal() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleApplySilent = async () => {
+  const applySilent = async () => {
     try {
       let level = 1;
       let duration = 0;
@@ -104,6 +115,14 @@ export function LiveRoomManagerMuteGlobal() {
     } catch (e) {
       toast.error((e as Error).message);
     }
+  };
+
+  const handleApplySilent = async () => {
+    if (globalMute.type === "member") {
+      setConfirmAllOpen(true);
+      return;
+    }
+    await applySilent();
   };
 
   const handleCancelSilent = async () => {
@@ -150,11 +169,13 @@ export function LiveRoomManagerMuteGlobal() {
         );
       case "success":
         return (
-          <div className="space-y-4">
-            <Label>全局禁言规则</Label>
-            <div className="space-y-3 rounded-md border p-4">
+          <div className="space-y-3">
+            <Label className="text-[11px] text-muted-foreground">
+              全局禁言规则
+            </Label>
+            <div className="space-y-2 rounded-lg border border-border p-3">
               <div
-                className={`flex cursor-pointer items-center gap-3 rounded-md p-3 transition-colors ${globalMute.type === "wealth" ? "border border-primary bg-primary/10" : "hover:bg-muted"}`}
+                className={`flex cursor-pointer items-center gap-3 rounded-lg p-2.5 transition-colors ${globalMute.type === "wealth" ? "border border-primary bg-primary/10" : "hover:bg-muted"}`}
                 onClick={() =>
                   setGlobalMute({ ...globalMute, type: "wealth" })
                 }>
@@ -192,7 +213,7 @@ export function LiveRoomManagerMuteGlobal() {
                 </div>
               )}
               <div
-                className={`flex cursor-pointer items-center gap-3 rounded-md p-3 transition-colors ${globalMute.type === "medal" ? "border border-primary bg-primary/10" : "hover:bg-muted"}`}
+                className={`flex cursor-pointer items-center gap-3 rounded-lg p-2.5 transition-colors ${globalMute.type === "medal" ? "border border-primary bg-primary/10" : "hover:bg-muted"}`}
                 onClick={() => setGlobalMute({ ...globalMute, type: "medal" })}>
                 <div
                   className={`flex h-4 w-4 items-center justify-center rounded-full border-2 ${globalMute.type === "medal" ? "border-primary" : "border-muted-foreground"}`}>
@@ -228,7 +249,7 @@ export function LiveRoomManagerMuteGlobal() {
                 </div>
               )}
               <div
-                className={`flex cursor-pointer items-center gap-3 rounded-md p-3 transition-colors ${globalMute.type === "member" ? "border border-destructive bg-destructive/10" : "hover:bg-muted"}`}
+                className={`flex cursor-pointer items-center gap-3 rounded-lg p-2.5 transition-colors ${globalMute.type === "member" ? "border border-destructive bg-destructive/10" : "hover:bg-muted"}`}
                 onClick={() =>
                   setGlobalMute({ ...globalMute, type: "member" })
                 }>
@@ -242,7 +263,9 @@ export function LiveRoomManagerMuteGlobal() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>禁言时间</Label>
+              <Label className="text-[11px] text-muted-foreground">
+                禁言时间
+              </Label>
               <Select
                 value={globalMute.duration}
                 onValueChange={(v) =>
@@ -265,7 +288,7 @@ export function LiveRoomManagerMuteGlobal() {
             </div>
             {!enabled ? (
               <div className="space-y-3">
-                <div className="flex items-center justify-between rounded-md border border-destructive bg-destructive/10 p-3">
+                <div className="flex items-center justify-between rounded-lg border border-destructive/40 bg-destructive/10 p-2.5">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium text-destructive">
                       禁言已开启，剩余时长
@@ -298,6 +321,26 @@ export function LiveRoomManagerMuteGlobal() {
                 开始禁言
               </LoadingButton>
             )}
+            <AlertDialog open={confirmAllOpen} onOpenChange={setConfirmAllOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>禁言所有观众？</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    “全员”会禁止所有观众在当前直播间发言，直到禁言结束或手动取消。
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>取消</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => {
+                      setConfirmAllOpen(false);
+                      void applySilent();
+                    }}>
+                    确认全员禁言
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         );
     }

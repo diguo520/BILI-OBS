@@ -10,6 +10,10 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+_User Data
+release
+preview.html
+src/preview.tsx
 *.local
 
 # Editor directories and files

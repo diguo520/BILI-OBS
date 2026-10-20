@@ -31,6 +31,45 @@ export interface Stream {
   key: string;
 }
 
+export type CommentRole = "anchor" | "admin" | "guard" | "level" | "normal";
+
+export interface CommentRoleColors {
+  name: string;
+  message: string;
+}
+
+export interface CommentStyleConfig {
+  fontSize: number;
+  levelThreshold: number;
+  shadow: {
+    enabled: boolean;
+    color: string;
+    blur: number;
+    offsetX: number;
+    offsetY: number;
+  };
+  roles: Record<CommentRole, CommentRoleColors>;
+}
+
+export const DEFAULT_COMMENT_STYLE: CommentStyleConfig = {
+  fontSize: 14,
+  levelThreshold: 20,
+  shadow: {
+    enabled: false,
+    color: "#000000",
+    blur: 2,
+    offsetX: 1,
+    offsetY: 1,
+  },
+  roles: {
+    anchor: { name: "#ff6b9d", message: "#ffffff" },
+    admin: { name: "#ffc061", message: "#ffffff" },
+    guard: { name: "#7da2ff", message: "#ffffff" },
+    level: { name: "#b49cff", message: "#ffffff" },
+    normal: { name: "#fb7299", message: "#ffffff" },
+  },
+};
+
 export interface AppConfig {
   cookies: AppCookie[];
   areaList: ParentArea[];
@@ -41,13 +80,17 @@ export interface AppConfig {
   roomId: number;
   csrf: string | null;
   roomTitle: string;
+  roomAnnouncement: string;
+  roomCover: string;
   categoryId: string;
   areaId: string;
   img_url: string;
   sub_url: string;
   roomToken: string;
   isOpenLive: boolean;
+  liveStartedAt: number | null;
   streams: Stream[];
+  commentStyle: CommentStyleConfig;
 }
 
 export const DEFAULT_CONFIG: AppConfig = {
@@ -60,11 +103,15 @@ export const DEFAULT_CONFIG: AppConfig = {
   roomId: 0,
   csrf: null,
   roomTitle: "",
+  roomAnnouncement: "",
+  roomCover: "",
   categoryId: "",
   areaId: "",
   img_url: "",
   sub_url: "",
   roomToken: "",
   isOpenLive: false,
+  liveStartedAt: null,
   streams: [],
+  commentStyle: DEFAULT_COMMENT_STYLE,
 };

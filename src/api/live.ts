@@ -201,6 +201,82 @@ export async function updateRoomArea(areaId: string): Promise<[]> {
   });
 }
 
+export async function updateRoomAnnouncement(
+  description: string,
+): Promise<[]> {
+  const state = useConfigStore.getState();
+  return request<[]>(BASE_URL, `/room/v1/Room/update`, {
+    method: "POST",
+    headers: {
+      Origin: BASE_URL,
+    },
+    data: {
+      room_id: String(state.config.roomId),
+      csrf: state.getCookie("bili_jct") || "",
+      csrf_token: state.getCookie("bili_jct") || "",
+      description,
+      platform: "pc_link",
+    },
+  });
+}
+
+export async function updateRoomCover(cover: string, id?: number): Promise<[]> {
+  const state = useConfigStore.getState();
+  return request<[]>(BASE_URL, `/room/v1/Cover/replace`, {
+    method: "POST",
+    headers: {
+      Origin: BASE_URL,
+    },
+    data: {
+      room_id: String(state.config.roomId),
+      csrf: state.getCookie("bili_jct") || "",
+      csrf_token: state.getCookie("bili_jct") || "",
+      cover,
+      ...(id ? { id: String(id) } : {}),
+      platform: "pc_link",
+    },
+  });
+}
+
+export interface CoverHistoryItem {
+  cover_url: string;
+  score: number;
+  score_color: string;
+  use_status: number;
+}
+
+export async function getCoverHistory(): Promise<CoverHistoryItem[]> {
+  const data = await request<{ cover_history?: CoverHistoryItem[] }>(
+    BASE_URL,
+    `/xlive/app-blink/v1/preLive/GetCoverHistory?platform=pc_link&build=1`,
+    {
+      headers: {
+        Origin: "https://live.bilibili.com",
+        Referer: "https://link.bilibili.com/p/center/index#/my-room/start-live",
+      },
+    },
+  );
+  return data.cover_history ?? [];
+}
+
+export async function setHistoryCover(cover: string): Promise<[]> {
+  return request<[]>(BASE_URL, `/xlive/app-blink/v1/preLive/UpdatePreLiveInfo`, {
+    method: "POST",
+    headers: {
+      Origin: "https://live.bilibili.com",
+      Referer: "https://link.bilibili.com/p/center/index#/my-room/start-live",
+    },
+    data: {
+      platform: "pc_link",
+      mobi_app: "pc_link",
+      build: "1",
+      cover,
+      coverVertical: "",
+      liveDirectionType: "1",
+    },
+  });
+}
+
 export async function startLive(
   version: string,
   build: string,
@@ -531,6 +607,69 @@ export async function getContributionRank(): Promise<ContributionRank> {
       headers: {
         origin: "https://live.bilibili.com",
         referer: "https://live.bilibili.com/",
+      },
+    },
+  );
+}
+
+interface WarningInfo {
+  list?: unknown[];
+  warning_list?: unknown[];
+  total?: number;
+  [key: string]: unknown;
+}
+
+export async function getWarningInfo(roomId: number): Promise<WarningInfo | null> {
+  try {
+    return await request<WarningInfo>(
+      BASE_URL,
+      `/xlive/web-ucenter/v1/warning/GetWarningInfo?room_id=${roomId}`,
+      {
+        headers: {
+          Origin: "https://live.bilibili.com",
+          referer: `https://live.bilibili.com/${roomId}`,
+        },
+      },
+    );
+  } catch {
+    return null;
+  }
+}
+
+export interface ViolationRecord {
+  violation_id?: number | string;
+  id?: number | string;
+  reason?: string;
+  violation_reason?: string;
+  violations_reason?: string;
+  title?: string;
+  content?: string;
+  punish_result?: string;
+  result?: string;
+  penalty_reason?: string;
+  punish_time?: string;
+  ctime?: string;
+  time?: string;
+  break_time?: string;
+  [key: string]: unknown;
+}
+
+export interface ViolationList {
+  count: number;
+  violations_record: ViolationRecord[];
+}
+
+export async function getViolationRecords(
+  page = 1,
+  pageSize = 20,
+): Promise<ViolationList> {
+  return request<ViolationList>(
+    BASE_URL,
+    `/xlive/web-ucenter/v1/anchorViolationsRecord/GetAnchorViolationsRecord?page=${page}&page_size=${pageSize}`,
+    {
+      headers: {
+        Origin: "https://link.bilibili.com",
+        Referer: "https://link.bilibili.com/p/center/index",
       },
     },
   );

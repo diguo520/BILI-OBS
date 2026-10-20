@@ -1,62 +1,44 @@
-import { Flame, Users, Wifi, WifiOff } from "@hugeicons/core-free-icons";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import { Flame, Users, Check } from "@hugeicons/core-free-icons";
 import { useWsStore } from "@/store/ws";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { cn } from "@/lib/utils";
 
 export function StatusBar() {
   const { onlineCount, watchedUser, connected } = useWsStore((s) => s);
 
   const formatNumber = (num: number) => {
-    if (num >= 10000) {
-      return (num / 10000).toFixed(1) + "w";
-    }
-    if (num >= 1000) {
-      return (num / 1000).toFixed(1) + "k";
-    }
+    if (num >= 10000) return (num / 10000).toFixed(1) + "w";
+    if (num >= 1000) return (num / 1000).toFixed(1) + "k";
     return num.toString();
   };
 
   return (
-    <div className="flex h-7 items-center justify-between border-t border-border bg-muted/50 px-4 text-xs text-muted-foreground">
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-1.5">
-          <HugeiconsIcon icon={Flame} className="h-3.5 w-3.5 text-orange-500" />
-          <span>已观看人次:</span>
-          <span className="font-medium text-foreground">
-            {formatNumber(watchedUser)}
-          </span>
-        </div>
-        <Separator orientation="vertical" className="h-4" />
-        <div className="flex items-center gap-1.5">
-          <HugeiconsIcon icon={Users} className="h-4 w-4" />
-          <span>在线观众:</span>
-          <span className="font-medium text-foreground">
-            {formatNumber(onlineCount || 0)}
-          </span>
-        </div>
-      </div>
-      <div className="flex items-center gap-2">
-        <Badge
-          variant="outline"
-          className={
-            connected
-              ? "border-green-600/30 bg-green-500/10 text-green-600"
-              : "border-destructive/30 bg-destructive/10 text-destructive"
-          }>
-          {connected ? (
-            <>
-              <HugeiconsIcon icon={Wifi} />
-              已连接
-            </>
-          ) : (
-            <>
-              <HugeiconsIcon icon={WifiOff} />
-              未连接
-            </>
+    <footer className="flex h-[26px] shrink-0 items-center gap-3.5 border-t border-border bg-sidebar px-3.5 text-[10.5px] text-muted-foreground">
+      <span className="inline-flex items-center gap-1.5">
+        <HugeiconsIcon icon={Flame} className="size-3 text-warning" />
+        已观看 <b className="font-semibold text-foreground/90">{formatNumber(watchedUser)}</b>
+      </span>
+      <span className="inline-flex items-center gap-1.5">
+        <HugeiconsIcon icon={Users} className="size-3" />
+        在线 <b className="font-semibold text-foreground/90">{formatNumber(onlineCount || 0)}</b>
+      </span>
+      <span
+        className={cn(
+          "inline-flex items-center gap-1.5",
+          connected ? "text-success" : "text-muted-foreground",
+        )}>
+        <span
+          className={cn(
+            "size-1.5 rounded-full",
+            connected ? "bg-success" : "bg-muted-foreground/50",
           )}
-        </Badge>
-      </div>
-    </div>
+        />
+        {connected ? "弹幕已连接" : "弹幕未连接"}
+      </span>
+      <span className="ml-auto inline-flex items-center gap-1.5 text-muted-foreground/70">
+        <HugeiconsIcon icon={Check} className="size-3" />
+        数据每 5 秒刷新
+      </span>
+    </footer>
   );
 }
