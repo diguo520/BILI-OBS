@@ -28,7 +28,7 @@ const tabs = [
   { id: "stream" as const, label: "开播设置", icon: Radio },
   { id: "manager" as const, label: "房间管理", icon: Shield },
   { id: "comments" as const, label: "弹幕", icon: MessageSquare },
-  { id: "tts" as const, label: "弹幕播报", icon: Megaphone01Icon },
+  { id: "tts" as const, label: "语音播报设置", icon: Megaphone01Icon },
   { id: "data" as const, label: "数据中心", icon: ChartHistogramIcon },
 ];
 

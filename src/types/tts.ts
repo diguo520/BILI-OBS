@@ -37,6 +37,8 @@ export interface TtsRules {
   guardOnly: boolean;
   /** 佩戴徽章才会读 */
   requireMedal: boolean;
+  /** 舰长等级门槛（0 = 不限；1 = 舰长，2 = 提督，3 = 总督） */
+  guardMinLevel: number;
   /** 忽略表情弹幕（纯 [表情] 内容的弹幕不播报） */
   ignoreEmoji: boolean;
   /** 合并礼物（短时间内同一礼物合并成一条） */
@@ -85,6 +87,7 @@ export const DEFAULT_TTS_RULES: TtsRules = {
   readName: true,
   guardOnly: false,
   requireMedal: false,
+  guardMinLevel: 0,
   ignoreEmoji: true,
   mergeGift: true,
   giftMinPrice: 0,
@@ -115,6 +118,9 @@ export interface TtsQueueItem {
   /** 来源消息类型，用于调试与统计 */
   kind: "chat" | "superchat" | "gift" | "enter" | "guard" | "test";
   username: string;
+  /** 礼物合并用：礼物名与累计数量 */
+  giftName?: string;
+  giftCount?: number;
   at: number;
 }
 

@@ -40,6 +40,17 @@ function hitBlockWord(text: string, words: string[]): string | null {
   return null;
 }
 
+/** 组装礼物播报文本（礼物合并时复用） */
+export function giftText(
+  name: string,
+  count: number,
+  giftName: string,
+  readName: boolean,
+): string {
+  const who = readName ? name + "送出 " : "送出 ";
+  return who + count + " 个 " + (giftName || "礼物");
+}
+
 /** 构造朗读文本；返回空串表示无可读内容 */
 export function buildText(c: Comment, cfg: TtsConfig): string {
   const r = cfg.rules;
@@ -51,9 +62,7 @@ export function buildText(c: Comment, cfg: TtsConfig): string {
     return r.readName ? name + "说 " + body : body;
   }
   if (c.type === "gift") {
-    const cnt = c.giftCount ?? 1;
-    const gname = c.giftName || "礼物";
-    return name + "送出 " + cnt + " 个 " + gname;
+    return giftText(name, c.giftCount ?? 1, c.giftName ?? "", r.readName);
   }
   if (c.type === "superchat") {
     const body = stripEmotes(c.message ?? "").trim();
@@ -77,6 +86,8 @@ export function decide(c: Comment, cfg: TtsConfig): TtsDecision {
   if (c.type === "guard" && !r.guard) return { speak: false, reason: "上舰播报已关闭" };
   if (r.guardOnly && (c.guardLevel ?? 0) <= 0 && !c.isAdmin)
     return { speak: false, reason: "已开启只读舰长/钻粉" };
+  if (r.guardMinLevel > 0 && (c.guardLevel ?? 0) < r.guardMinLevel && !c.isAdmin)
+    return { speak: false, reason: "未达舰长等级门槛" };
   if (r.requireMedal && !c.badge) return { speak: false, reason: "已开启需佩戴徽章" };
   if (c.type === "gift" && r.giftMinPrice > 0 && (c.giftPrice ?? 0) < r.giftMinPrice)
     return { speak: false, reason: "未达付费礼物门槛" };
@@ -190,9 +201,31 @@ export const useTtsStore = create<TtsState>((set, get) => ({
       text: d.text,
       kind: c.type,
       username: c.username ?? "",
+      giftName: c.giftName,
+      giftCount: c.giftCount,
       at: Date.now(),
     };
     set((s) => {
+      // 礼物合并：同一人、同一礼物在队列里累加，而不是各播一条
+      if (cfg.rules.mergeGift && c.type === "gift" && s.queue.length > 0) {
+        const who = c.username ?? "";
+        const gname = c.giftName ?? "";
+        const idx = s.queue.findIndex(
+          (q) => q.kind === "gift" && q.username === who && q.giftName === gname,
+        );
+        if (idx >= 0) {
+          const merged = [...s.queue];
+          const prev = merged[idx];
+          const total = (prev.giftCount ?? 0) + (c.giftCount ?? 1);
+          merged[idx] = {
+            ...prev,
+            giftCount: total,
+            at: Date.now(),
+            text: giftText(who, total, gname, cfg.rules.readName),
+          };
+          return { queue: merged };
+        }
+      }
       let q = [...s.queue, item];
       let dropped = s.droppedCount;
       if (q.length > cfg.maxQueue) {

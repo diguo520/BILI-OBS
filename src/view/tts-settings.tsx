@@ -188,6 +188,25 @@ export function TtsSettings() {
         </Section>
       </div>
 
+      <Section
+        title="音频输出（播报端）"
+        hint="本软件把语音直接播到系统默认输出设备，因此观众能听见；若不想把自己的其他声音也播出去，可用方案②。">
+        <div className="grid gap-2 sm:grid-cols-3">
+          <div className="rounded-lg border border-border/70 p-2.5 text-[10.5px] text-muted-foreground">
+            <div className="mb-1 text-[12px] text-foreground">① 系统默认输出</div>
+            开播即用，OBS 添加「桌面音频」采集
+          </div>
+          <div className="rounded-lg border border-primary/40 p-2.5 text-[10.5px] text-muted-foreground">
+            <div className="mb-1 text-[12px] text-foreground">② 虚拟声卡（推荐）</div>
+            输出到 VB-Cable，OBS 只采集这一路，最干净
+          </div>
+          <div className="rounded-lg border border-border/70 p-2.5 text-[10.5px] text-muted-foreground">
+            <div className="mb-1 text-[12px] text-foreground">③ 不影响其他声音</div>
+            两种方式观众都能听见，区别只在采集范围
+          </div>
+        </div>
+      </Section>
+
       <Section title={"音色（" + VOICES.length + " 个）"} hint="音色 ID 与阿里云百炼官方一致，官方另有 _v3 版本音质更好。">
         <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 xl:grid-cols-6">
           {VOICES.map((v) => {
@@ -289,6 +308,12 @@ export function TtsSettings() {
               onCheckedChange={(v) => setRules({ gift: v })}
             />
           </Row>
+          <Row label="合并礼物" hint="同一人连刷同一礼物时累加数量，不逐条念">
+            <Switch
+              checked={tts.rules.mergeGift}
+              onCheckedChange={(v) => setRules({ mergeGift: v })}
+            />
+          </Row>
           <Row label="播报付费留言（SC）">
             <Switch
               checked={tts.rules.superchat}
@@ -324,6 +349,20 @@ export function TtsSettings() {
             <Switch
               checked={tts.rules.requireMedal}
               onCheckedChange={(v) => setRules({ requireMedal: v })}
+            />
+          </Row>
+          <Row label="舰长等级门槛" hint="0 = 不限；1 舰长 / 2 提督 / 3 总督">
+            <Input
+              className="w-20"
+              type="number"
+              min={0}
+              max={3}
+              value={tts.rules.guardMinLevel}
+              onChange={(e) =>
+                setRules({
+                  guardMinLevel: Math.min(3, Math.max(0, Number(e.target.value) || 0)),
+                })
+              }
             />
           </Row>
           <Row label="忽略表情弹幕">
