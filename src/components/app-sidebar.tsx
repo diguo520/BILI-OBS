@@ -5,6 +5,7 @@ import {
   MessageSquare,
   Settings,
   ChartHistogramIcon,
+  Megaphone01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -19,6 +20,7 @@ type TabType =
   | "manager"
   | "comments"
   | "data"
+  | "tts"
   | "settings";
 
 const tabs = [
@@ -26,6 +28,7 @@ const tabs = [
   { id: "stream" as const, label: "开播设置", icon: Radio },
   { id: "manager" as const, label: "房间管理", icon: Shield },
   { id: "comments" as const, label: "弹幕", icon: MessageSquare },
+  { id: "tts" as const, label: "弹幕播报", icon: Megaphone01Icon },
   { id: "data" as const, label: "数据中心", icon: ChartHistogramIcon },
 ];
 

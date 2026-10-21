@@ -16,6 +16,8 @@ import { DetachedComments } from "@/view/detached-comments";
 import { listen } from "@tauri-apps/api/event";
 import { Overview } from "@/view/overview";
 import { DataCenter } from "@/view/data-center";
+import { TtsSettings } from "@/view/tts-settings";
+import { useTtsStore } from "@/store/tts";
 
 type AuthState = "loading" | "login" | "authenticated";
 
@@ -37,6 +39,14 @@ export default function App() {
       listener.then((f) => f());
     };
   }, [initListeners]);
+
+  // 订阅弹幕流，交给播报规则引擎处理
+  useEffect(() => {
+    const stop = useTtsStore.getState().startBridge();
+    return () => {
+      stop();
+    };
+  }, []);
 
   useEffect(() => {
     if (isCommentsWindow) return;
@@ -104,6 +114,7 @@ export default function App() {
                   />
                 )}
                 {activeTab === "manager" && <LiveRoomManager />}
+                {activeTab === "tts" && <TtsSettings />}
                 {activeTab === "data" && <DataCenter />}
                 {activeTab === "settings" && (
                   <MoreSettings onLogout={handleLogout} />

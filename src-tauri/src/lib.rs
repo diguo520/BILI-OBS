@@ -1,8 +1,10 @@
 mod commands;
 mod connection;
+mod tts;
 mod utils;
 
 use crate::commands::{comment_connect, comment_disconnect, comment_is_connected};
+use crate::tts::tts_synthesize;
 use std::sync::Arc;
 use std::path::PathBuf;
 use tauri::{
@@ -110,6 +112,7 @@ pub fn run() {
             comment_connect,
             comment_disconnect,
             comment_is_connected,
+            tts_synthesize,
             get_data_dir
         ])
         .build(tauri::generate_context!())

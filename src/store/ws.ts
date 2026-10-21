@@ -119,6 +119,7 @@ export const useWsStore = create<WsState>((set) => ({
                   level,
                   guardLevel,
                   isAdmin,
+                  badge: obj["info"]?.[3]?.[1] ?? undefined,
                 },
               ],
             }));
@@ -175,10 +176,42 @@ export const useWsStore = create<WsState>((set) => ({
                       obj["data"]["medal_info"]?.guard_level ??
                       0,
                   ),
+                  giftPrice:
+                    Number(
+                      obj["data"]["discount_price"] ??
+                        obj["data"]["price"] ??
+                        0,
+                    ) / 1000,
                 },
               ],
             }));
             break;
+          case "USER_TOAST_MSG":
+          case "GUARD_BUY": {
+            const gd = obj["data"] ?? {};
+            const gl = Number(gd["guard_level"] ?? 0);
+            const roleName =
+              gd["role_name"] ??
+              gd["gift_name"] ??
+              (gl === 3 ? "总督" : gl === 2 ? "提督" : gl === 1 ? "舰长" : "上舰");
+            const guardNum = Number(gd["num"] ?? 1);
+            set((state) => ({
+              messageId: state.messageId++,
+              regularMessages: [
+                ...state.regularMessages,
+                {
+                  id: String(state.messageId),
+                  username: gd["username"] ?? gd["uname"] ?? "",
+                  message: roleName + (guardNum > 1 ? " ×" + guardNum : ""),
+                  timestamp: new Date(),
+                  type: "guard",
+                  uid: Number(gd["uid"] ?? 0),
+                  guardLevel: gl,
+                },
+              ],
+            }));
+            break;
+          }
           case "SUPER_CHAT_MESSAGE":
             set((state) => ({
               messageId: state.messageId++,

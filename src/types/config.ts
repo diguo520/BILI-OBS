@@ -1,3 +1,5 @@
+import { DEFAULT_TTS_CONFIG, type TtsConfig } from "@/types/tts";
+
 export interface AppCookie {
   name: string;
   value: string;
@@ -91,6 +93,7 @@ export interface AppConfig {
   liveStartedAt: number | null;
   streams: Stream[];
   commentStyle: CommentStyleConfig;
+  tts: TtsConfig;
 }
 
 export const DEFAULT_CONFIG: AppConfig = {
@@ -114,4 +117,5 @@ export const DEFAULT_CONFIG: AppConfig = {
   liveStartedAt: null,
   streams: [],
   commentStyle: DEFAULT_COMMENT_STYLE,
+  tts: DEFAULT_TTS_CONFIG,
 };

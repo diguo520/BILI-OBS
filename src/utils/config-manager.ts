@@ -6,6 +6,7 @@ import {
   DEFAULT_COMMENT_STYLE,
   DEFAULT_CONFIG,
 } from "@/types/config";
+import { DEFAULT_TTS_CONFIG } from "@/types/tts";
 
 const CONFIG_FILENAME = "app-config.json";
 let dataDirPromise: Promise<string> | null = null;
@@ -53,6 +54,16 @@ export class ConfigManager {
             guard: { ...DEFAULT_COMMENT_STYLE.roles.guard, ...style.roles?.guard },
             level: { ...DEFAULT_COMMENT_STYLE.roles.level, ...style.roles?.level },
             normal: { ...DEFAULT_COMMENT_STYLE.roles.normal, ...style.roles?.normal },
+          },
+        },
+        tts: {
+          ...DEFAULT_TTS_CONFIG,
+          ...parsed.tts,
+          rules: {
+            ...DEFAULT_TTS_CONFIG.rules,
+            ...parsed.tts?.rules,
+            blockWords:
+              parsed.tts?.rules?.blockWords ?? DEFAULT_TTS_CONFIG.rules.blockWords,
           },
         },
       };
