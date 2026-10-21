@@ -3,11 +3,9 @@ import { Play, Square } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { useConfigStore } from "@/store/config";
 import { useTtsStore } from "@/store/tts";
@@ -15,53 +13,38 @@ import { VOICES } from "@/data/voices";
 import { DEFAULT_TTS_CONFIG, type TtsConfig, type TtsRules } from "@/types/tts";
 import { cn } from "@/lib/utils";
 
-function Section({
-  title,
-  hint,
-  children,
-}: {
-  title: string;
-  hint?: string;
-  children: React.ReactNode;
-}) {
+function Card({ title, className, children }: { title: string; className?: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-xl border border-border bg-card p-4">
-      <h3 className="mb-2.5 text-[12.5px] font-semibold text-foreground/90">
-        {title}
-      </h3>
+    <section className={cn("flex min-h-0 flex-col overflow-hidden rounded-lg border border-border bg-card p-2.5", className)}>
+      <h3 className="mb-1.5 text-[11.5px] font-semibold text-foreground/90">{title}</h3>
       {children}
-      {hint && (
-        <p className="mt-2.5 text-[10.5px] leading-relaxed text-muted-foreground">
-          {hint}
-        </p>
-      )}
     </section>
   );
 }
 
-function Row({
-  label,
-  hint,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  children: React.ReactNode;
-}) {
+function Line({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between gap-3 py-1.5">
-      <div className="min-w-0">
-        <div className="text-[12px]">{label}</div>
-        {hint && (
-          <div className="text-[10px] leading-snug text-muted-foreground">
-            {hint}
-          </div>
-        )}
-      </div>
-      <div className="shrink-0">{children}</div>
+    <div className="flex h-[26px] items-center justify-between gap-1.5" title={hint}>
+      <span className="truncate text-[10.5px] text-foreground/90">{label}</span>
+      <span className="shrink-0">{children}</span>
     </div>
   );
 }
+
+function Knob({ label, value, min, max, step, onChange }: { label: string; value: number; min: number; max: number; step: number; onChange: (v: number) => void }) {
+  return (
+    <div className="min-w-0">
+      <div className="flex items-center justify-between text-[10.5px]">
+        <span className="truncate text-foreground/90">{label}</span>
+        <span className="shrink-0 tabular-nums text-muted-foreground">{value}</span>
+      </div>
+      <Slider className="mt-0.5" min={min} max={max} step={step} value={[value]} onValueChange={(v) => onChange(v[0] ?? value)} />
+    </div>
+  );
+}
+
+const NUM = "h-6 w-[70px] px-1.5 text-[11px] tabular-nums";
+const NUM_S = "h-6 w-[52px] px-1.5 text-[11px] tabular-nums";
 
 export function TtsSettings() {
   const tts = useConfigStore((s) => s.config.tts ?? DEFAULT_TTS_CONFIG);
@@ -79,10 +62,8 @@ export function TtsSettings() {
   const [testText, setTestText] = useState("欢迎来到直播间");
   const [busy, setBusy] = useState(false);
 
-  const setTts = (patch: Partial<TtsConfig>) =>
-    updateConfig({ tts: { ...tts, ...patch } });
-  const setRules = (patch: Partial<TtsRules>) =>
-    updateConfig({ tts: { ...tts, rules: { ...tts.rules, ...patch } } });
+  const setTts = (patch: Partial<TtsConfig>) => updateConfig({ tts: { ...tts, ...patch } });
+  const setRules = (patch: Partial<TtsRules>) => updateConfig({ tts: { ...tts, rules: { ...tts.rules, ...patch } } });
 
   const runTest = async () => {
     if (!testText.trim() || busy) return;
@@ -94,335 +75,161 @@ export function TtsSettings() {
     }
   };
 
+  const toggles: { key: keyof TtsRules; label: string }[] = [
+    { key: "chat", label: "一般弹幕" },
+    { key: "gift", label: "礼物" },
+    { key: "mergeGift", label: "合并礼物" },
+    { key: "superchat", label: "付费留言" },
+    { key: "guard", label: "上舰/会员" },
+    { key: "enter", label: "进房" },
+    { key: "readName", label: "读昵称" },
+    { key: "guardOnly", label: "只读舰长" },
+    { key: "requireMedal", label: "需徽章" },
+    { key: "ignoreEmoji", label: "忽略表情" },
+  ];
+
   return (
-    <div className="themed-scrollbar flex h-full flex-col gap-3 overflow-y-auto">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-[19px] font-semibold tracking-tight">弹幕播报</h1>
-          <p className="mt-0.5 text-[11.5px] text-muted-foreground">
-            按规则朗读弹幕、礼物、SC 与上舰；音频走系统默认输出，OBS 用「桌面音频」采集
+    <div className="flex h-full min-h-0 flex-col gap-2 overflow-hidden">
+      <div className="flex shrink-0 items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-[16px] font-semibold tracking-tight">语音播报设置</h1>
+          <p className="truncate text-[10px] text-muted-foreground">
+            输出走系统默认设备 · OBS 用「桌面音频」采集 · 未填 Key 时用本地提示音联调
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
-          {!tts.apiKey && <Badge variant="secondary">未配置 Key</Badge>}
-          {tts.apiKey && !tts.enabled && <Badge variant="secondary">已暂停</Badge>}
-          {tts.enabled && <Badge>播报中</Badge>}
-          <Switch
-            checked={tts.enabled}
-            onCheckedChange={(v) => setTts({ enabled: v })}
-            aria-label="播报总开关"
-          />
+        <div className="flex shrink-0 items-center gap-1.5">
+          <Badge variant="secondary" className="h-5 px-1.5 text-[10px] tabular-nums">
+            {"播" + spokenCount + " 跳" + skippedCount + " 丢" + droppedCount}
+          </Badge>
+          <Badge variant="secondary" className="h-5 px-1.5 text-[10px] tabular-nums">
+            {"队列" + queueLen}
+          </Badge>
+          {!tts.apiKey && (
+            <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">
+              无 Key
+            </Badge>
+          )}
+          <Switch checked={tts.enabled} onCheckedChange={(v) => setTts({ enabled: v })} aria-label="播报总开关" />
         </div>
       </div>
 
-      <div className="grid gap-3 lg:grid-cols-2">
-        <Section
-          title="语音引擎"
-          hint="填写你自己的阿里云百炼 API Key。留空时使用本地提示音，便于先联调整条链路。">
-          <div className="space-y-2">
-            <div>
-              <Label className="text-[11px]">API Key</Label>
-              <Input
-                type="password"
-                placeholder="sk-..."
-                value={tts.apiKey}
-                onChange={(e) => setTts({ apiKey: e.target.value.trim() })}
-              />
+      <div className="grid shrink-0 grid-cols-2 gap-2">
+        <Card title="语音引擎">
+          <div className="grid grid-cols-3 gap-2">
+            <div className="min-w-0">
+              <div className="text-[10px] text-muted-foreground">API Key</div>
+              <Input type="password" placeholder="sk-..." className="mt-0.5 h-6 px-1.5 text-[11px]" value={tts.apiKey} onChange={(e) => setTts({ apiKey: e.target.value.trim() })} />
             </div>
-            <div>
-              <Label className="text-[11px]">模型</Label>
-              <Input
-                value={tts.model}
-                onChange={(e) => setTts({ model: e.target.value.trim() })}
-              />
+            <div className="min-w-0">
+              <div className="text-[10px] text-muted-foreground">模型</div>
+              <Input className="mt-0.5 h-6 px-1.5 text-[11px]" value={tts.model} onChange={(e) => setTts({ model: e.target.value.trim() })} />
             </div>
-            <div className="flex gap-2 pt-1">
-              <Input
-                value={testText}
-                onChange={(e) => setTestText(e.target.value)}
-                placeholder="试听文本"
-              />
-              <Button size="sm" disabled={busy} onClick={runTest}>
-                <HugeiconsIcon icon={Play} className="size-3.5" />
-                试听
-              </Button>
-            </div>
-          </div>
-        </Section>
-
-        <Section title="运行状态">
-          <div className="grid grid-cols-3 gap-2 text-center">
-            {[
-              { k: "已播报", v: spokenCount },
-              { k: "已跳过", v: skippedCount },
-              { k: "已丢弃", v: droppedCount },
-            ].map((it) => (
-              <div key={it.k} className="rounded-lg border border-border/70 py-2">
-                <div className="text-[17px] font-semibold tabular-nums">
-                  {it.v}
-                </div>
-                <div className="text-[10px] text-muted-foreground">{it.k}</div>
+            <div className="min-w-0">
+              <div className="text-[10px] text-muted-foreground">试听</div>
+              <div className="mt-0.5 flex gap-1">
+                <Input className="h-6 min-w-0 flex-1 px-1.5 text-[11px]" value={testText} onChange={(e) => setTestText(e.target.value)} />
+                <Button size="sm" className="h-6 shrink-0 px-2 text-[11px]" disabled={busy} onClick={runTest}>
+                  <HugeiconsIcon icon={Play} className="size-3" />
+                  听
+                </Button>
               </div>
-            ))}
-          </div>
-          <Separator className="my-3" />
-          <div className="space-y-1 text-[10.5px] text-muted-foreground">
-            <div>队列中：{queueLen} 条</div>
-            <div className="truncate">
-              最近跳过原因：{lastSkipReason ?? "—"}
             </div>
-            {lastError && (
-              <div className="text-destructive">最近错误：{lastError}</div>
-            )}
           </div>
-          <div className="mt-3 flex gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={!speaking && queueLen === 0}
-              onClick={stopAll}>
-              <HugeiconsIcon icon={Square} className="size-3.5" />
-              停止并清空队列
+          <div className="mt-1.5 flex items-center gap-2 text-[10px] text-muted-foreground">
+            <Button size="sm" variant="outline" className="h-6 shrink-0 px-2 text-[11px]" disabled={!speaking && queueLen === 0} onClick={stopAll}>
+              <HugeiconsIcon icon={Square} className="size-3" />
+              停止清空
             </Button>
+            <span className="truncate" title={lastError ?? undefined}>
+              {lastError ? "错误：" + lastError : "跳过：" + (lastSkipReason ?? "—")}
+            </span>
           </div>
-        </Section>
+        </Card>
+
+        <Card title="播报参数">
+          <div className="grid grid-cols-3 gap-x-2.5 gap-y-1">
+            <Knob label="音量" value={tts.volume} min={0} max={100} step={1} onChange={(v) => setTts({ volume: v })} />
+            <Knob label="语速" value={tts.speechRate} min={0.5} max={2} step={0.05} onChange={(v) => setTts({ speechRate: v })} />
+            <Knob label="语调" value={tts.pitchRate} min={0.5} max={2} step={0.05} onChange={(v) => setTts({ pitchRate: v })} />
+            <Line label="频控 ms" hint="两条播报之间的最小间隔">
+              <Input type="number" className={NUM} value={tts.minIntervalMs} onChange={(e) => setTts({ minIntervalMs: Number(e.target.value) || 0 })} />
+            </Line>
+            <Line label="队列上限" hint="超出后按右侧策略丢弃">
+              <div className="flex items-center gap-1.5">
+                <Input type="number" className={NUM_S} value={tts.maxQueue} onChange={(e) => setTts({ maxQueue: Math.max(1, Number(e.target.value) || 1) })} />
+                <span className="text-[10px] text-muted-foreground">丢最旧</span>
+                <Switch checked={tts.dropOldest} onCheckedChange={(v) => setTts({ dropOldest: v })} />
+              </div>
+            </Line>
+          </div>
+        </Card>
       </div>
 
-      <Section
-        title="音频输出（播报端）"
-        hint="本软件把语音直接播到系统默认输出设备，因此观众能听见；若不想把自己的其他声音也播出去，可用方案②。">
-        <div className="grid gap-2 sm:grid-cols-3">
-          <div className="rounded-lg border border-border/70 p-2.5 text-[10.5px] text-muted-foreground">
-            <div className="mb-1 text-[12px] text-foreground">① 系统默认输出</div>
-            开播即用，OBS 添加「桌面音频」采集
-          </div>
-          <div className="rounded-lg border border-primary/40 p-2.5 text-[10.5px] text-muted-foreground">
-            <div className="mb-1 text-[12px] text-foreground">② 虚拟声卡（推荐）</div>
-            输出到 VB-Cable，OBS 只采集这一路，最干净
-          </div>
-          <div className="rounded-lg border border-border/70 p-2.5 text-[10.5px] text-muted-foreground">
-            <div className="mb-1 text-[12px] text-foreground">③ 不影响其他声音</div>
-            两种方式观众都能听见，区别只在采集范围
-          </div>
-        </div>
-      </Section>
-
-      <Section title={"音色（" + VOICES.length + " 个）"} hint="音色 ID 与阿里云百炼官方一致，官方另有 _v3 版本音质更好。">
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 xl:grid-cols-6">
+      <Card title={"音色（" + VOICES.length + "）"} className="shrink-0">
+        <div className="grid grid-cols-5 gap-1.5">
           {VOICES.map((v) => {
             const active = tts.voice === v.officialVoice;
             return (
               <button
                 key={v.officialVoice}
                 type="button"
+                title={v.desc + " · " + v.officialVoice}
                 onClick={() => setTts({ voice: v.officialVoice, model: v.model })}
                 className={cn(
-                  "flex flex-col items-start gap-0.5 rounded-lg border px-2.5 py-2 text-left transition-colors",
-                  active
-                    ? "border-primary bg-primary/10"
-                    : "border-border bg-card hover:border-primary/40",
+                  "flex h-[26px] flex-col justify-center overflow-hidden rounded-md border px-2 text-left transition-colors",
+                  active ? "border-primary bg-primary/10" : "border-border bg-card hover:border-primary/40",
                 )}>
-                <span className="text-[12px] font-medium">{v.name}</span>
-                <span className="truncate text-[10px] text-muted-foreground">
-                  {v.desc} · {v.officialVoice}
-                </span>
+                <span className="truncate text-[10.5px] leading-tight font-medium">{v.name}</span>
+                <span className="truncate text-[9px] leading-tight text-muted-foreground">{v.officialVoice}</span>
               </button>
             );
           })}
         </div>
-      </Section>
+      </Card>
 
-      <div className="grid gap-3 lg:grid-cols-2">
-        <Section title="播报参数">
-          <Row label="音量" hint={String(tts.volume) + "%"}>
-            <Slider
-              className="w-40"
-              min={0}
-              max={100}
-              step={1}
-              value={[tts.volume]}
-              onValueChange={(v) => setTts({ volume: v[0] ?? 100 })}
-            />
-          </Row>
-          <Row label="语速" hint={String(tts.speechRate)}>
-            <Slider
-              className="w-40"
-              min={0.5}
-              max={2}
-              step={0.05}
-              value={[tts.speechRate]}
-              onValueChange={(v) => setTts({ speechRate: v[0] ?? 1 })}
-            />
-          </Row>
-          <Row label="语调" hint={String(tts.pitchRate)}>
-            <Slider
-              className="w-40"
-              min={0.5}
-              max={2}
-              step={0.05}
-              value={[tts.pitchRate]}
-              onValueChange={(v) => setTts({ pitchRate: v[0] ?? 1 })}
-            />
-          </Row>
-          <Row label="频控间隔" hint="两条播报之间至少间隔，防刷屏">
-            <Input
-              className="w-24"
-              type="number"
-              value={tts.minIntervalMs}
-              onChange={(e) =>
-                setTts({ minIntervalMs: Number(e.target.value) || 0 })
-              }
-            />
-          </Row>
-          <Row label="队列上限" hint="超出后按下方策略丢弃">
-            <div className="flex items-center gap-2">
-              <Input
-                className="w-20"
-                type="number"
-                value={tts.maxQueue}
-                onChange={(e) =>
-                  setTts({ maxQueue: Math.max(1, Number(e.target.value) || 1) })
-                }
-              />
-              <label className="flex items-center gap-1 text-[10.5px] text-muted-foreground">
+      <div className="grid min-h-0 flex-1 grid-cols-[1.45fr_1fr] gap-2">
+        <Card title="播报规则（3 列）">
+          <div className="grid grid-cols-3 gap-x-2.5">
+            {toggles.map((tg) => (
+              <div key={tg.key} className="flex h-[23px] items-center justify-between gap-1">
+                <span className="truncate text-[10.5px] text-foreground/90">{tg.label}</span>
                 <Switch
-                  checked={tts.dropOldest}
-                  onCheckedChange={(v) => setTts({ dropOldest: v })}
+                  className="scale-90"
+                  checked={tts.rules[tg.key] as boolean}
+                  onCheckedChange={(v) => {
+                    const patch = {} as Partial<TtsRules>;
+                    (patch as Record<string, boolean>)[tg.key] = v;
+                    setRules(patch);
+                  }}
                 />
-                丢最旧
-              </label>
-            </div>
-          </Row>
-        </Section>
+              </div>
+            ))}
+            <Line label="舰长门槛" hint="0 不限；1 舰长 / 2 提督 / 3 总督">
+              <Input type="number" min={0} max={3} className={NUM_S} value={tts.rules.guardMinLevel} onChange={(e) => setRules({ guardMinLevel: Math.min(3, Math.max(0, Number(e.target.value) || 0)) })} />
+            </Line>
+          </div>
+        </Card>
 
-        <Section title="播报规则">
-          <Row label="播报一般弹幕">
-            <Switch
-              checked={tts.rules.chat}
-              onCheckedChange={(v) => setRules({ chat: v })}
-            />
-          </Row>
-          <Row label="播报礼物">
-            <Switch
-              checked={tts.rules.gift}
-              onCheckedChange={(v) => setRules({ gift: v })}
-            />
-          </Row>
-          <Row label="合并礼物" hint="同一人连刷同一礼物时累加数量，不逐条念">
-            <Switch
-              checked={tts.rules.mergeGift}
-              onCheckedChange={(v) => setRules({ mergeGift: v })}
-            />
-          </Row>
-          <Row label="播报付费留言（SC）">
-            <Switch
-              checked={tts.rules.superchat}
-              onCheckedChange={(v) => setRules({ superchat: v })}
-            />
-          </Row>
-          <Row label="播报上舰 / 会员">
-            <Switch
-              checked={tts.rules.guard}
-              onCheckedChange={(v) => setRules({ guard: v })}
-            />
-          </Row>
-          <Row label="播报进房">
-            <Switch
-              checked={tts.rules.enter}
-              onCheckedChange={(v) => setRules({ enter: v })}
-            />
-          </Row>
-          <Separator className="my-2" />
-          <Row label="读昵称">
-            <Switch
-              checked={tts.rules.readName}
-              onCheckedChange={(v) => setRules({ readName: v })}
-            />
-          </Row>
-          <Row label="只读舰长 / 钻粉">
-            <Switch
-              checked={tts.rules.guardOnly}
-              onCheckedChange={(v) => setRules({ guardOnly: v })}
-            />
-          </Row>
-          <Row label="佩戴徽章才会读">
-            <Switch
-              checked={tts.rules.requireMedal}
-              onCheckedChange={(v) => setRules({ requireMedal: v })}
-            />
-          </Row>
-          <Row label="舰长等级门槛" hint="0 = 不限；1 舰长 / 2 提督 / 3 总督">
-            <Input
-              className="w-20"
-              type="number"
-              min={0}
-              max={3}
-              value={tts.rules.guardMinLevel}
-              onChange={(e) =>
-                setRules({
-                  guardMinLevel: Math.min(3, Math.max(0, Number(e.target.value) || 0)),
-                })
-              }
-            />
-          </Row>
-          <Row label="忽略表情弹幕">
-            <Switch
-              checked={tts.rules.ignoreEmoji}
-              onCheckedChange={(v) => setRules({ ignoreEmoji: v })}
-            />
-          </Row>
-        </Section>
-      </div>
-
-      <Section title="门槛与屏蔽">
-        <div className="grid gap-3 sm:grid-cols-3">
-          <div>
-            <Label className="text-[11px]">付费礼物门槛（元，0 = 不限）</Label>
-            <Input
-              type="number"
-              value={tts.rules.giftMinPrice}
-              onChange={(e) =>
-                setRules({ giftMinPrice: Number(e.target.value) || 0 })
-              }
-            />
+        <Card title="门槛与屏蔽">
+          <div className="grid grid-cols-3 gap-x-2.5">
+            <Line label="礼物门槛" hint="付费礼物金额下限（元），0 = 不限">
+              <Input type="number" className={NUM_S} value={tts.rules.giftMinPrice} onChange={(e) => setRules({ giftMinPrice: Number(e.target.value) || 0 })} />
+            </Line>
+            <Line label="SC 门槛" hint="SC 金额下限（元），0 = 不限">
+              <Input type="number" className={NUM_S} value={tts.rules.scMinPrice} onChange={(e) => setRules({ scMinPrice: Number(e.target.value) || 0 })} />
+            </Line>
+            <Line label="最大字数" hint="单条播报超出后截断">
+              <Input type="number" className={NUM_S} value={tts.rules.maxLength} onChange={(e) => setRules({ maxLength: Math.max(1, Number(e.target.value) || 1) })} />
+            </Line>
           </div>
-          <div>
-            <Label className="text-[11px]">SC 金额门槛（元，0 = 不限）</Label>
-            <Input
-              type="number"
-              value={tts.rules.scMinPrice}
-              onChange={(e) =>
-                setRules({ scMinPrice: Number(e.target.value) || 0 })
-              }
-            />
-          </div>
-          <div>
-            <Label className="text-[11px]">单条最大字数</Label>
-            <Input
-              type="number"
-              value={tts.rules.maxLength}
-              onChange={(e) =>
-                setRules({ maxLength: Math.max(1, Number(e.target.value) || 1) })
-              }
-            />
-          </div>
-        </div>
-        <div className="mt-3">
-          <Label className="text-[11px]">屏蔽词（每行一个，用换行分隔）</Label>
           <Textarea
-            rows={3}
+            className="mt-1 min-h-0 flex-1 resize-none px-1.5 py-1 text-[10.5px] leading-snug"
+            placeholder="屏蔽词，每行一个"
             value={tts.rules.blockWords.join("\n")}
-            onChange={(e) =>
-              setRules({
-                blockWords: e.target.value
-                  .split("\n")
-                  .map((s) => s.trim())
-                  .filter(Boolean),
-              })
-            }
+            onChange={(e) => setRules({ blockWords: e.target.value.split("\n").map((s) => s.trim()).filter(Boolean) })}
           />
-        </div>
-      </Section>
+        </Card>
+      </div>
     </div>
   );
 }
