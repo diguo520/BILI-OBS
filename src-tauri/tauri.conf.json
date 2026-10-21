@@ -16,9 +16,9 @@
         "label": "main",
         "title": "BILI OBS",
         "width": 900,
-        "height": 600,
+        "height": 640,
         "minWidth": 900,
-        "minHeight": 600,
+        "minHeight": 640,
         "decorations": false
       },
       {

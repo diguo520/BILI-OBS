@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 function Card({ title, className, children }: { title: string; className?: string; children: React.ReactNode }) {
   return (
     <section className={cn("flex min-h-0 flex-col overflow-hidden rounded-lg border border-border bg-card p-2.5", className)}>
-      <h3 className="mb-1.5 text-[11.5px] font-semibold text-foreground/90">{title}</h3>
+      <h3 className="mb-2 text-[12px] font-semibold text-foreground/90">{title}</h3>
       {children}
     </section>
   );
@@ -24,7 +24,7 @@ function Card({ title, className, children }: { title: string; className?: strin
 
 function Line({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
-    <div className="flex h-[26px] items-center justify-between gap-1.5" title={hint}>
+    <div className="flex h-[28px] items-center justify-between gap-2" title={hint}>
       <span className="truncate text-[10.5px] text-foreground/90">{label}</span>
       <span className="shrink-0">{children}</span>
     </div>
@@ -38,7 +38,7 @@ function Knob({ label, value, min, max, step, onChange }: { label: string; value
         <span className="truncate text-foreground/90">{label}</span>
         <span className="shrink-0 tabular-nums text-muted-foreground">{value}</span>
       </div>
-      <Slider className="mt-0.5" min={min} max={max} step={step} value={[value]} onValueChange={(v) => onChange(v[0] ?? value)} />
+      <Slider className="mt-1.5" min={min} max={max} step={step} value={[value]} onValueChange={(v) => onChange(v[0] ?? value)} />
     </div>
   );
 }
@@ -89,13 +89,17 @@ export function TtsSettings() {
   ];
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-2 overflow-hidden">
-      <div className="flex shrink-0 items-center justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="text-[16px] font-semibold tracking-tight">语音播报设置</h1>
-          <p className="truncate text-[10px] text-muted-foreground">
-            输出走系统默认设备 · OBS 用「桌面音频」采集 · 未填 Key 时用本地提示音联调
-          </p>
+    <div className="flex h-full min-h-0 flex-col gap-2.5 overflow-hidden">
+      <div className="flex shrink-0 items-center justify-between gap-3 pr-0.5">
+        <div className="flex min-w-0 items-baseline gap-2.5">
+          <h1
+            className="shrink-0 text-[16px] font-semibold tracking-tight"
+            title="输出走系统默认设备；OBS 用「桌面音频」采集即可让观众听见；未填 Key 时用本地提示音联调">
+            语音播报设置
+          </h1>
+          <span className="truncate text-[10.5px] text-muted-foreground">
+            系统默认输出 · OBS 桌面音频采集
+          </span>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           <Badge variant="secondary" className="h-5 px-1.5 text-[10px] tabular-nums">
@@ -117,15 +121,15 @@ export function TtsSettings() {
         <Card title="语音引擎">
           <div className="grid grid-cols-3 gap-2">
             <div className="min-w-0">
-              <div className="text-[10px] text-muted-foreground">API Key</div>
-              <Input type="password" placeholder="sk-..." className="mt-0.5 h-6 px-1.5 text-[11px]" value={tts.apiKey} onChange={(e) => setTts({ apiKey: e.target.value.trim() })} />
+              <div className="text-[10.5px] text-muted-foreground">API Key</div>
+              <Input type="password" placeholder="sk-..." className="mt-1 h-7 px-2 text-[11.5px]" value={tts.apiKey} onChange={(e) => setTts({ apiKey: e.target.value.trim() })} />
             </div>
             <div className="min-w-0">
-              <div className="text-[10px] text-muted-foreground">模型</div>
-              <Input className="mt-0.5 h-6 px-1.5 text-[11px]" value={tts.model} onChange={(e) => setTts({ model: e.target.value.trim() })} />
+              <div className="text-[10.5px] text-muted-foreground">模型</div>
+              <Input className="mt-1 h-7 px-2 text-[11.5px]" value={tts.model} onChange={(e) => setTts({ model: e.target.value.trim() })} />
             </div>
             <div className="min-w-0">
-              <div className="text-[10px] text-muted-foreground">试听</div>
+              <div className="text-[10.5px] text-muted-foreground">试听</div>
               <div className="mt-0.5 flex gap-1">
                 <Input className="h-6 min-w-0 flex-1 px-1.5 text-[11px]" value={testText} onChange={(e) => setTestText(e.target.value)} />
                 <Button size="sm" className="h-6 shrink-0 px-2 text-[11px]" disabled={busy} onClick={runTest}>
@@ -147,7 +151,7 @@ export function TtsSettings() {
         </Card>
 
         <Card title="播报参数">
-          <div className="grid grid-cols-3 gap-x-2.5 gap-y-1">
+          <div className="grid grid-cols-3 gap-x-3 gap-y-2">
             <Knob label="音量" value={tts.volume} min={0} max={100} step={1} onChange={(v) => setTts({ volume: v })} />
             <Knob label="语速" value={tts.speechRate} min={0.5} max={2} step={0.05} onChange={(v) => setTts({ speechRate: v })} />
             <Knob label="语调" value={tts.pitchRate} min={0.5} max={2} step={0.05} onChange={(v) => setTts({ pitchRate: v })} />
@@ -157,7 +161,7 @@ export function TtsSettings() {
             <Line label="队列上限" hint="超出后按右侧策略丢弃">
               <div className="flex items-center gap-1.5">
                 <Input type="number" className={NUM_S} value={tts.maxQueue} onChange={(e) => setTts({ maxQueue: Math.max(1, Number(e.target.value) || 1) })} />
-                <span className="text-[10px] text-muted-foreground">丢最旧</span>
+                <span className="text-[10.5px] text-muted-foreground">丢最旧</span>
                 <Switch checked={tts.dropOldest} onCheckedChange={(v) => setTts({ dropOldest: v })} />
               </div>
             </Line>
@@ -166,7 +170,7 @@ export function TtsSettings() {
       </div>
 
       <Card title={"音色（" + VOICES.length + "）"} className="shrink-0">
-        <div className="grid grid-cols-5 gap-1.5">
+        <div className="grid grid-cols-5 gap-1.5 pb-0.5">
           {VOICES.map((v) => {
             const active = tts.voice === v.officialVoice;
             return (
@@ -176,7 +180,7 @@ export function TtsSettings() {
                 title={v.desc + " · " + v.officialVoice}
                 onClick={() => setTts({ voice: v.officialVoice, model: v.model })}
                 className={cn(
-                  "flex h-[26px] flex-col justify-center overflow-hidden rounded-md border px-2 text-left transition-colors",
+                  "flex h-[28px] flex-col justify-between overflow-hidden rounded-md border px-2.5 py-[3px] text-left transition-colors",
                   active ? "border-primary bg-primary/10" : "border-border bg-card hover:border-primary/40",
                 )}>
                 <span className="truncate text-[10.5px] leading-tight font-medium">{v.name}</span>
@@ -188,13 +192,12 @@ export function TtsSettings() {
       </Card>
 
       <div className="grid min-h-0 flex-1 grid-cols-[1.45fr_1fr] gap-2">
-        <Card title="播报规则（3 列）">
-          <div className="grid grid-cols-3 gap-x-2.5">
+        <Card title="播报规则（3 列）" className="p-3">
+          <div className="grid grid-cols-3 gap-x-3">
             {toggles.map((tg) => (
-              <div key={tg.key} className="flex h-[23px] items-center justify-between gap-1">
-                <span className="truncate text-[10.5px] text-foreground/90">{tg.label}</span>
+              <div key={tg.key} className="flex h-[28px] items-center justify-between gap-2">
+                <span className="truncate text-[11.5px] text-foreground/90">{tg.label}</span>
                 <Switch
-                  className="scale-90"
                   checked={tts.rules[tg.key] as boolean}
                   onCheckedChange={(v) => {
                     const patch = {} as Partial<TtsRules>;
@@ -204,14 +207,11 @@ export function TtsSettings() {
                 />
               </div>
             ))}
-            <Line label="舰长门槛" hint="0 不限；1 舰长 / 2 提督 / 3 总督">
-              <Input type="number" min={0} max={3} className={NUM_S} value={tts.rules.guardMinLevel} onChange={(e) => setRules({ guardMinLevel: Math.min(3, Math.max(0, Number(e.target.value) || 0)) })} />
-            </Line>
           </div>
         </Card>
 
         <Card title="门槛与屏蔽">
-          <div className="grid grid-cols-3 gap-x-2.5">
+          <div className="grid grid-cols-2 gap-x-3 gap-y-1">
             <Line label="礼物门槛" hint="付费礼物金额下限（元），0 = 不限">
               <Input type="number" className={NUM_S} value={tts.rules.giftMinPrice} onChange={(e) => setRules({ giftMinPrice: Number(e.target.value) || 0 })} />
             </Line>
@@ -221,9 +221,12 @@ export function TtsSettings() {
             <Line label="最大字数" hint="单条播报超出后截断">
               <Input type="number" className={NUM_S} value={tts.rules.maxLength} onChange={(e) => setRules({ maxLength: Math.max(1, Number(e.target.value) || 1) })} />
             </Line>
+            <Line label="舰长门槛" hint="0 不限；1 舰长 / 2 提督 / 3 总督">
+              <Input type="number" min={0} max={3} className={NUM_S} value={tts.rules.guardMinLevel} onChange={(e) => setRules({ guardMinLevel: Math.min(3, Math.max(0, Number(e.target.value) || 0)) })} />
+            </Line>
           </div>
           <Textarea
-            className="mt-1 min-h-0 flex-1 resize-none px-1.5 py-1 text-[10.5px] leading-snug"
+            className="mt-2 min-h-0 flex-1 resize-none px-3 py-2 text-[11px] leading-relaxed"
             placeholder="屏蔽词，每行一个"
             value={tts.rules.blockWords.join("\n")}
             onChange={(e) => setRules({ blockWords: e.target.value.split("\n").map((s) => s.trim()).filter(Boolean) })}
