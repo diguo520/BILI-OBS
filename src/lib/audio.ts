@@ -37,6 +37,14 @@ class PcmPlayer {
     return this.ctx;
   }
 
+  /** 在用户手势中调用：创建并恢复 AudioContext，规避自动播放策略 */
+  unlock(): void {
+    const ctx = this.ac();
+    if (ctx.state === "suspended") {
+      void ctx.resume();
+    }
+  }
+
   /** 播放一段 base64 PCM；resolve 表示播放完毕（用于串行化队列） */
   async play(pcmBase64: string, volume = 1, sampleRate = 16000): Promise<void> {
     const bytes = base64ToBytes(pcmBase64);
@@ -81,3 +89,24 @@ class PcmPlayer {
 }
 
 export const pcmPlayer = new PcmPlayer();
+
+let audioUnlocked = false;
+
+/**
+ * 首次用户交互时解锁 AudioContext。
+ * 浏览器的自动播放策略默认拦截「无手势」的播放，
+ * 不做这一步的话，只有点「试听」能出声、弹幕自动播报会静音。
+ */
+export function installAudioUnlock(): () => void {
+  const handler = () => {
+    if (audioUnlocked) return;
+    audioUnlocked = true;
+    pcmPlayer.unlock();
+  };
+  window.addEventListener("pointerdown", handler);
+  window.addEventListener("keydown", handler);
+  return () => {
+    window.removeEventListener("pointerdown", handler);
+    window.removeEventListener("keydown", handler);
+  };
+}

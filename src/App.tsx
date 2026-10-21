@@ -18,6 +18,7 @@ import { Overview } from "@/view/overview";
 import { DataCenter } from "@/view/data-center";
 import { TtsSettings } from "@/view/tts-settings";
 import { useTtsStore } from "@/store/tts";
+import { installAudioUnlock } from "@/lib/audio";
 
 type AuthState = "loading" | "login" | "authenticated";
 
@@ -46,6 +47,11 @@ export default function App() {
     return () => {
       stop();
     };
+  }, []);
+
+  // 首次交互时解锁音频，确保弹幕自动播报也能出声
+  useEffect(() => {
+    return installAudioUnlock();
   }, []);
 
   useEffect(() => {
