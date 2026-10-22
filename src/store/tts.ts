@@ -7,6 +7,7 @@ import { pcmPlayer } from "@/lib/audio";
 import type { Comment } from "@/types/comment";
 import {
   DEFAULT_TTS_CONFIG,
+  TTS_MODEL,
   type TtsAudio,
   type TtsConfig,
   type TtsDecision,
@@ -107,7 +108,8 @@ async function synthesize(text: string): Promise<TtsAudio> {
     req: {
       text,
       voice: cfg.voice,
-      model: cfg.model,
+      // 固定模型，忽略历史配置里可能残留的错误值（例如 v3.5 系列）
+      model: TTS_MODEL,
       apiKey: cfg.apiKey,
       volume: cfg.volume,
       speechRate: cfg.speechRate,

@@ -11,6 +11,7 @@ import { useConfigStore } from "@/store/config";
 import { useTtsStore } from "@/store/tts";
 import { VOICES } from "@/data/voices";
 import { DEFAULT_TTS_CONFIG, type TtsConfig, type TtsRules } from "@/types/tts";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { cn } from "@/lib/utils";
 import { loadVoiceIcon } from "@/lib/voiceIcons";
 
@@ -72,6 +73,9 @@ function VoiceAvatar({ url, name, size = 48 }: { url: string; name: string; size
 }
 
 /** 所有数字输入框统一尺寸，避免同一页出现多种宽度 */
+/** 百炼控制台 API-KEY 页面 */
+const BAILIAN_API_KEY_URL = "https://bailian.console.aliyun.com/?apiKey=1#/api-key";
+
 const NUM = "h-7 w-[68px] px-2 text-[11.5px] tabular-nums";
 
 export function TtsSettings() {
@@ -94,8 +98,8 @@ export function TtsSettings() {
   const TEST_TEXT = "欢迎使用BILI OBS";
 
   /** 点音色头像 = 选用该音色并立即试听 */
-  const previewVoice = async (voice: string, model: string) => {
-    setTts({ voice, model });
+  const previewVoice = async (voice: string) => {
+    setTts({ voice });
     try {
       await speakTest(TEST_TEXT);
     } catch (err) {
@@ -142,15 +146,15 @@ export function TtsSettings() {
             点音色头像即可试听 · 系统默认输出 · OBS 桌面音频采集
           </span>
         </div>
-        <div className="flex shrink-0 items-center gap-1.5">
-          <Badge variant="secondary" className="h-5 px-1.5 text-[10px] tabular-nums">
+        <div className="flex shrink-0 items-center gap-2">
+          <Badge variant="secondary" className="h-[22px] px-2.5 text-[10.5px] leading-none tabular-nums">
             {"播" + spokenCount + " 跳" + skippedCount + " 丢" + droppedCount}
           </Badge>
-          <Badge variant="secondary" className="h-5 px-1.5 text-[10px] tabular-nums">
+          <Badge variant="secondary" className="h-[22px] px-2.5 text-[10.5px] leading-none tabular-nums">
             {"队列" + queueLen}
           </Badge>
           {!tts.apiKey && (
-            <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">
+            <Badge variant="secondary" className="h-[22px] px-2.5 text-[10.5px] leading-none">
               无 Key
             </Badge>
           )}
@@ -160,16 +164,23 @@ export function TtsSettings() {
 
       <div className="grid shrink-0 grid-cols-2 gap-2.5">
         <Card title="语音引擎">
-          <div className="grid grid-cols-2 gap-2.5">
-            <div className="min-w-0">
-              <div className="text-[10.5px] text-muted-foreground">API Key</div>
-              <Input type="password" placeholder="sk-..." className="mt-1 h-7 px-2 text-[11.5px]" value={tts.apiKey} onChange={(e) => setTts({ apiKey: e.target.value.trim() })} />
-            </div>
-            <div className="min-w-0">
-              <div className="text-[10.5px] text-muted-foreground">模型</div>
-              <Input className="mt-1 h-7 px-2 text-[11.5px]" value={tts.model} onChange={(e) => setTts({ model: e.target.value.trim() })} />
-            </div>
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[10.5px] text-muted-foreground">API Key</span>
+            <button
+              type="button"
+              className="shrink-0 text-[10.5px] text-primary hover:underline"
+              title="打开阿里云百炼控制台创建 API-KEY"
+              onClick={() => void openUrl(BAILIAN_API_KEY_URL)}>
+              如何获取 API Key →
+            </button>
           </div>
+          <Input
+            type="password"
+            placeholder="sk-..."
+            className="mt-1 h-7 w-full px-2 text-[11.5px]"
+            value={tts.apiKey}
+            onChange={(e) => setTts({ apiKey: e.target.value.trim() })}
+          />
           <div className="mt-2 flex items-center gap-2 text-[10.5px] text-muted-foreground">
             <Button size="sm" variant="outline" className="h-6 shrink-0 px-2 py-0 text-[11px]" disabled={!speaking && queueLen === 0} onClick={stopAll}>
               <HugeiconsIcon icon={Square} className="size-3" />
@@ -209,7 +220,7 @@ export function TtsSettings() {
                 type="button"
                 aria-label={v.name}
                 title={v.name + " · " + v.desc + " · " + v.officialVoice}
-                onClick={() => void previewVoice(v.officialVoice, v.model)}
+                onClick={() => void previewVoice(v.officialVoice)}
                 className={cn(
                   "flex h-[56px] items-center justify-center overflow-hidden rounded-lg border transition-colors",
                   active ? "border-primary bg-primary/10" : "border-border bg-card hover:border-primary/40",

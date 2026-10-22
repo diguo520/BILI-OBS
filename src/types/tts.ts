@@ -96,11 +96,21 @@ export const DEFAULT_TTS_RULES: TtsRules = {
   maxLength: 60,
 };
 
+/**
+ * 合成模型固定为 cosyvoice-v3-flash。
+ *
+ * 不能改成 cosyvoice-v3.5-* / v3-plus：内置音色是按模型「分代」的，
+ * 我们的音色库全部是 _v3 系列，实测在 v3.5-flash 上会返回
+ * `Engine return error code: 418` 且完全无音频（官方把 v3.5 系列归在
+ * 「声音设计（自定义音色）」类目，需先自行设计音色，不由内置音色库提供）。
+ */
+export const TTS_MODEL = "cosyvoice-v3-flash";
+
 export const DEFAULT_TTS_CONFIG: TtsConfig = {
   enabled: false,
   apiKey: "",
   voice: "longqiang_v3",
-  model: "cosyvoice-v3-flash",
+  model: TTS_MODEL,
   volume: 100,
   speechRate: 1,
   pitchRate: 1,

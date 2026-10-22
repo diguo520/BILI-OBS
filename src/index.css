@@ -192,3 +192,16 @@
     );
   }
 }
+
+
+/* 数字输入框：隐藏原生上下微调箭头，直接键入数字即可 */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
