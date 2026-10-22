@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Play, Square } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { useTtsStore } from "@/store/tts";
 import { VOICES } from "@/data/voices";
 import { DEFAULT_TTS_CONFIG, type TtsConfig, type TtsRules } from "@/types/tts";
 import { cn } from "@/lib/utils";
+import { loadVoiceIcon } from "@/lib/voiceIcons";
 
 function Card({ title, className, children }: { title: string; className?: string; children: React.ReactNode }) {
   return (
@@ -40,6 +41,27 @@ function Knob({ label, value, min, max, step, onChange }: { label: string; value
       </div>
       <Slider className="mt-1.5" min={min} max={max} step={step} value={[value]} onValueChange={(v) => onChange(v[0] ?? value)} />
     </div>
+  );
+}
+
+/** 音色头像：抓取失败时退化为首字色块，不影响版面 */
+function VoiceAvatar({ url, name }: { url: string; name: string }) {
+  const [src, setSrc] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    loadVoiceIcon(url).then((u) => {
+      if (alive && u) setSrc(u);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [url]);
+
+  return (
+    <span className="grid size-5 shrink-0 place-items-center overflow-hidden rounded-[5px] bg-muted text-[9px] text-muted-foreground">
+      {src ? <img src={src} alt="" className="size-full object-cover" /> : name.slice(0, 1)}
+    </span>
   );
 }
 
@@ -196,11 +218,16 @@ export function TtsSettings() {
                 title={v.desc + " · " + v.officialVoice}
                 onClick={() => setTts({ voice: v.officialVoice, model: v.model })}
                 className={cn(
-                  "flex h-[28px] flex-col justify-between overflow-hidden rounded-md border px-2.5 py-[3px] text-left transition-colors",
+                  "flex h-[28px] items-center gap-2 overflow-hidden rounded-md border px-2 text-left transition-colors",
                   active ? "border-primary bg-primary/10" : "border-border bg-card hover:border-primary/40",
                 )}>
-                <span className="truncate text-[10.5px] leading-tight font-medium">{v.name}</span>
-                <span className="truncate text-[9px] leading-tight text-muted-foreground">{v.officialVoice}</span>
+                <VoiceAvatar url={v.icon} name={v.name} />
+                <span className="flex min-w-0 flex-1 flex-col justify-center">
+                  <span className="truncate text-[10.5px] leading-tight font-medium">{v.name}</span>
+                  <span className="truncate text-[9px] leading-tight text-muted-foreground">
+                    {v.officialVoice}
+                  </span>
+                </span>
               </button>
             );
           })}

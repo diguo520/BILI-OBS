@@ -40,6 +40,9 @@
         },
         {
           "url": "https://*.hdslb.com/*"
+        },
+        {
+          "url": "https://obh-live.oss-cn-shanghai.aliyuncs.com/*"
         }
       ],
       "deny": []
