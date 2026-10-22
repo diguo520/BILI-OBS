@@ -17,7 +17,7 @@ import { loadVoiceIcon } from "@/lib/voiceIcons";
 
 function Card({ title, className, children }: { title: string; className?: string; children: React.ReactNode }) {
   return (
-    <section className={cn("flex min-h-0 flex-col overflow-hidden rounded-lg border border-border bg-card p-2.5", className)}>
+    <section className={cn("flex min-h-0 flex-col overflow-hidden rounded-lg border border-border bg-card p-3", className)}>
       <h3 className="mb-2 text-[12px] font-semibold text-foreground/90">{title}</h3>
       {children}
     </section>
@@ -26,7 +26,7 @@ function Card({ title, className, children }: { title: string; className?: strin
 
 function Line({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
-    <div className="flex h-[28px] items-center justify-between gap-2" title={hint}>
+    <div className="flex h-[30px] items-center justify-between gap-2" title={hint}>
       <span className="truncate text-[11px] text-foreground/90">{label}</span>
       <span className="shrink-0">{children}</span>
     </div>
@@ -134,7 +134,7 @@ export function TtsSettings() {
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-2.5 overflow-hidden">
+    <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden">
       <div className="flex shrink-0 items-center justify-between gap-3 pr-0.5">
         <div className="flex min-w-0 items-baseline gap-2.5">
           <h1
@@ -142,19 +142,24 @@ export function TtsSettings() {
             title="输出走系统默认设备；OBS 用「桌面音频」采集即可让观众听见；未填 Key 时用本地提示音联调">
             语音播报设置
           </h1>
-          <span className="truncate text-[10.5px] text-muted-foreground">
-            点音色头像即可试听 · 系统默认输出 · OBS 桌面音频采集
-          </span>
+          <span className="truncate text-[11px] text-muted-foreground">点音色头像即可试听</span>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <Badge variant="secondary" className="h-[22px] px-2.5 text-[10.5px] leading-none tabular-nums">
-            {"播" + spokenCount + " 跳" + skippedCount + " 丢" + droppedCount}
-          </Badge>
-          <Badge variant="secondary" className="h-[22px] px-2.5 text-[10.5px] leading-none tabular-nums">
-            {"队列" + queueLen}
-          </Badge>
+        <div className="flex shrink-0 items-center gap-3.5">
+          {[
+            { label: "播", value: spokenCount },
+            { label: "跳", value: skippedCount },
+            { label: "丢", value: droppedCount },
+            { label: "队列", value: queueLen },
+          ].map((m) => (
+            <Badge
+              key={m.label}
+              variant="secondary"
+              className="h-[28px] px-5 text-[11px] leading-none tabular-nums">
+              {m.label} {m.value}
+            </Badge>
+          ))}
           {!tts.apiKey && (
-            <Badge variant="secondary" className="h-[22px] px-2.5 text-[10.5px] leading-none">
+            <Badge variant="secondary" className="h-[28px] px-5 text-[11px] leading-none">
               无 Key
             </Badge>
           )}
@@ -162,7 +167,7 @@ export function TtsSettings() {
         </div>
       </div>
 
-      <div className="grid shrink-0 grid-cols-2 gap-2.5">
+      <div className="grid shrink-0 grid-cols-2 gap-3">
         <Card title="语音引擎">
           <div className="flex items-center justify-between gap-2">
             <span className="text-[10.5px] text-muted-foreground">API Key</span>
@@ -193,25 +198,29 @@ export function TtsSettings() {
         </Card>
 
         <Card title="播报参数">
-          <div className="grid grid-cols-3 gap-x-3 gap-y-2">
-            <Knob label="音量" value={tts.volume} min={0} max={100} step={1} onChange={(v) => setTts({ volume: v })} />
-            <Knob label="语速" value={tts.speechRate} min={0.5} max={2} step={0.05} onChange={(v) => setTts({ speechRate: v })} />
-            <Knob label="语调" value={tts.pitchRate} min={0.5} max={2} step={0.05} onChange={(v) => setTts({ pitchRate: v })} />
-            <Line label="频控" hint="两条播报之间的最小间隔（毫秒）">
-              <Input type="number" className={NUM} value={tts.minIntervalMs} onChange={(e) => setTts({ minIntervalMs: Number(e.target.value) || 0 })} />
-            </Line>
-            <Line label="队列" hint="队列上限：排队超过该条数时按右侧策略丢弃">
-              <Input type="number" className={NUM} value={tts.maxQueue} onChange={(e) => setTts({ maxQueue: Math.max(1, Number(e.target.value) || 1) })} />
-            </Line>
-            <Line label="丢最旧" hint="队列满时丢弃最旧的一条，而不是最新的">
-              <Switch checked={tts.dropOldest} onCheckedChange={(v) => setTts({ dropOldest: v })} />
-            </Line>
+          <div className="grid grid-cols-2 gap-x-6">
+            <div className="flex flex-col gap-2">
+              <Knob label="音量" value={tts.volume} min={0} max={100} step={1} onChange={(v) => setTts({ volume: v })} />
+              <Knob label="语速" value={tts.speechRate} min={0.5} max={2} step={0.05} onChange={(v) => setTts({ speechRate: v })} />
+              <Knob label="语调" value={tts.pitchRate} min={0.5} max={2} step={0.05} onChange={(v) => setTts({ pitchRate: v })} />
+            </div>
+            <div className="flex flex-col justify-between">
+              <Line label="频控" hint="两条播报之间的最小间隔（毫秒）">
+                <Input type="number" className={NUM} value={tts.minIntervalMs} onChange={(e) => setTts({ minIntervalMs: Number(e.target.value) || 0 })} />
+              </Line>
+              <Line label="队列" hint="队列上限：排队超过该条数时按右侧策略丢弃">
+                <Input type="number" className={NUM} value={tts.maxQueue} onChange={(e) => setTts({ maxQueue: Math.max(1, Number(e.target.value) || 1) })} />
+              </Line>
+              <Line label="丢最旧" hint="队列满时丢弃最旧的一条，而不是最新的">
+                <Switch checked={tts.dropOldest} onCheckedChange={(v) => setTts({ dropOldest: v })} />
+              </Line>
+            </div>
           </div>
         </Card>
       </div>
 
       <Card title={"音色（" + VOICES.length + "）· 点头像试听"} className="shrink-0">
-        <div className="grid grid-cols-9 gap-1.5">
+        <div className="grid grid-cols-9 gap-2">
           {VOICES.map((v) => {
             const active = tts.voice === v.officialVoice;
             return (
@@ -222,23 +231,23 @@ export function TtsSettings() {
                 title={v.name + " · " + v.desc + " · " + v.officialVoice}
                 onClick={() => void previewVoice(v.officialVoice)}
                 className={cn(
-                  "flex h-[56px] items-center justify-center overflow-hidden rounded-lg border transition-colors",
+                  "flex h-[60px] items-center justify-center overflow-hidden rounded-lg border transition-colors",
                   active ? "border-primary bg-primary/10" : "border-border bg-card hover:border-primary/40",
                 )}>
-                <VoiceAvatar url={v.icon} name={v.name} size={48} />
+                <VoiceAvatar url={v.icon} name={v.name} size={52} />
               </button>
             );
           })}
         </div>
       </Card>
 
-      <div className="grid min-h-0 flex-1 grid-cols-[1.45fr_1fr] gap-2.5">
+      <div className="grid min-h-0 flex-1 grid-cols-[1.45fr_1fr] gap-3">
         <Card title="播报规则（3 列）" className="p-3">
-          <div className="grid flex-1 grid-cols-3 gap-x-4">
+          <div className="grid flex-1 grid-cols-3 gap-x-8">
             {ruleColumns.map((col, ci) => (
               <div key={ci} className="flex flex-col justify-between">
                 {col.map((tg) => (
-                  <div key={tg.key} className="flex h-[28px] items-center justify-between gap-2">
+                  <div key={tg.key} className="flex h-[30px] items-center justify-between gap-2">
                     <span className="truncate text-[11.5px] text-foreground/90">{tg.label}</span>
                     <Switch checked={tts.rules[tg.key] as boolean} onCheckedChange={(v) => toggleRule(tg.key, v)} />
                   </div>
@@ -249,7 +258,7 @@ export function TtsSettings() {
         </Card>
 
         <Card title="门槛与屏蔽">
-          <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+          <div className="grid grid-cols-2 gap-x-5 gap-y-2">
             <Line label="礼物门槛" hint="付费礼物金额下限（元），0 = 不限">
               <Input type="number" className={NUM} value={tts.rules.giftMinPrice} onChange={(e) => setRules({ giftMinPrice: Number(e.target.value) || 0 })} />
             </Line>
