@@ -49,7 +49,11 @@ function presetOf(style: CommentStyleConfig): CommentPreset {
  * 2. `box-decoration-break: clone` 让多行文本**每行各有一块**圆角底板，
  *    否则换行处会连成一片。
  */
-function presetExtras(preset: CommentPreset, fill: string): CSSProperties {
+function presetExtras(
+  preset: CommentPreset,
+  fill: string,
+  isMessage = false,
+): CSSProperties {
   switch (preset) {
     case "plain":
       return {};
@@ -68,13 +72,17 @@ function presetExtras(preset: CommentPreset, fill: string): CSSProperties {
         textShadow: "0 0 1px #000, 0 2px 5px rgba(0,0,0,.75)",
       };
     case "plate":
+      // 底板会超出文字行盒，若不给行高与间距，昵称底板会与正文底板上下**贴在一起**。
+      // lineHeight 撑高行盒让底板之间自然留白；正文再补一个上间距，与昵称分开。
       return {
         backgroundColor: "rgba(6,10,16,.62)",
         backdropFilter: "blur(3px)",
-        padding: "1px 7px",
+        padding: "2px 8px",
         borderRadius: "7px",
+        lineHeight: 1.6,
         boxDecorationBreak: "clone",
         textShadow: "0 1px 2px rgba(0,0,0,.4)",
+        ...(isMessage ? { marginTop: "3px" } : {}),
       };
     case "glow":
       return {
@@ -107,7 +115,7 @@ export function getNameStyle(
     fontSize: `${Math.max(10, style.fontSize - 2)}px`,
     ...(preset === "plain"
       ? { textShadow: shadow(style) }
-      : presetExtras(preset, color)),
+      : presetExtras(preset, color, true)),
   };
 }
 
