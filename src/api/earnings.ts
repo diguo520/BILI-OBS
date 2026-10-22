@@ -12,14 +12,25 @@ export interface IncomeSummary {
     yr_ago?: number;
     thirty_days_ago?: number;
   };
+  /** 收入来源明细：字段名以线上返回为准，缺失时界面不渲染该区块 */
+  sources?: unknown;
+  income_source?: unknown;
   summary?: {
     state?: number;
+    /** 当日收益（分） */
     daily_amt?: number;
     annual_amt?: number;
     thirty_days_amt?: number;
     over_last_day_amt?: number;
     over_last_thirty_days_amt?: number;
   };
+}
+
+/** 收入来源明细（直播 / 创作激励 / 花火商单 / 悬赏带货 / 包月充电 / 自定义充电） */
+export interface IncomeSource {
+  name: string;
+  amount: number;
+  state: number;
 }
 
 export interface WithdrawSummary {

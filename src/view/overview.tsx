@@ -23,6 +23,7 @@ import {
   getViolationRecords,
   type ViolationRecord,
 } from "@/api/live";
+import type { IncomeSource } from "@/api/earnings";
 import {
   formatCny,
   getIncomeSummary,
@@ -41,6 +42,10 @@ interface OverviewProps {
 }
 
 interface RevenueState {
+  /** 当日收益（分） */
+  daily: number;
+  /** 较前一日（分） */
+  diffDay: number;
   thirty: number;
   diff: number;
   withdraw: number;
@@ -77,8 +82,12 @@ export function Overview({ onNavigate }: OverviewProps) {
   const [violations, setViolations] = useState<ViolationRecord[] | null>(null);
   const [violationOpen, setViolationOpen] = useState(false);
   const [revenue, setRevenue] = useState<RevenueState | null>(null);
+  /** 收入来源明细，接口有返回时才渲染 */
+  const [incomeSources, setIncomeSources] = useState<IncomeSource[]>([]);
+  /** 收益接口原始返回，供「原始数据」按钮复制核对字段 */
+  const [incomeRaw, setIncomeRaw] = useState<unknown>(null);
   const [revenueError, setRevenueError] = useState(false);
-  const [period, setPeriod] = useState<"30d" | "1y">("30d");
+  const [period, setPeriod] = useState<"day" | "30d" | "1y">("30d");
   const upDays = useUpDays();
 
   useEffect(() => {
@@ -144,11 +153,27 @@ export function Overview({ onNavigate }: OverviewProps) {
         if (cancelled) return;
         const summary = income.summary;
         setRevenue({
+          daily: summary?.daily_amt ?? 0,
+          diffDay: summary?.over_last_day_amt ?? 0,
           thirty: summary?.thirty_days_amt ?? 0,
           diff: summary?.over_last_thirty_days_amt ?? 0,
           annual: summary?.annual_amt ?? 0,
           withdraw: withdraw.withdraw_total ?? 0,
         });
+        setIncomeRaw(income);
+        // 收入来源：字段名以线上返回为准，逐层容错；拿不到就不渲染该区块
+        const raw = income.sources ?? income.income_source;
+        const list = Array.isArray(raw) ? raw : [];
+        setIncomeSources(
+          list
+            .filter((x): x is Record<string, unknown> => !!x && typeof x === "object")
+            .map((o) => ({
+              name: String(o.name ?? o.title ?? o.source ?? ""),
+              amount: Number(o.amount ?? o.money ?? o.total ?? 0),
+              state: Number(o.state ?? o.status ?? 0),
+            }))
+            .filter((s) => s.name),
+        );
         setRevenueError(false);
       } catch {
         if (!cancelled) setRevenueError(true);
@@ -361,7 +386,25 @@ export function Overview({ onNavigate }: OverviewProps) {
             <span className="text-[10px] text-muted-foreground">
               {areaName || "未选择分区"} · 直播间 {roomId}
             </span>
-            <div className="ml-auto flex gap-1 rounded-md bg-muted p-0.5">
+            <button
+              className="ml-auto text-[10px] text-muted-foreground hover:text-foreground"
+              title="复制收益接口原始返回，便于核对字段"
+              onClick={() =>
+                void navigator.clipboard.writeText(JSON.stringify(incomeRaw, null, 2))
+              }>
+              原始数据
+            </button>
+            <div className="flex gap-1 rounded-md bg-muted p-0.5">
+              <button
+                onClick={() => setPeriod("day")}
+                className={cn(
+                  "h-5 rounded px-2 text-[10px]",
+                  period === "day"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground",
+                )}>
+                当日
+              </button>
               <button
                 onClick={() => setPeriod("30d")}
                 className={cn(
@@ -398,28 +441,65 @@ export function Overview({ onNavigate }: OverviewProps) {
               </Button>
             </div>
           ) : (
-            <div className="flex items-end gap-8">
-              <RevenueMetric
-                label={period === "30d" ? "近30日总收益" : "近1年总收益"}
-                value={formatCny(
-                  period === "30d" ? revenue?.thirty : revenue?.annual,
-                )}
-                big
-              />
-              <RevenueMetric
-                label={period === "30d" ? "较前30日" : "较前一年"}
-                value={
-                  period === "30d" && revenue
-                    ? `${revenue.diff >= 0 ? "+" : ""}${formatCny(revenue.diff)}`
-                    : "--"
-                }
-                tone="up"
-              />
-              <RevenueMetric
-                label="可提现收益"
-                value={formatCny(revenue?.withdraw)}
-              />
-            </div>
+            <>
+              <div className="flex items-end gap-8">
+                <RevenueMetric
+                  label={
+                    period === "day"
+                      ? "当日收益"
+                      : period === "30d"
+                        ? "近30日总收益"
+                        : "近1年总收益"
+                  }
+                  value={formatCny(
+                    period === "day"
+                      ? revenue?.daily
+                      : period === "30d"
+                        ? revenue?.thirty
+                        : revenue?.annual,
+                  )}
+                  big
+                />
+                <RevenueMetric
+                  label={
+                    period === "day"
+                      ? "较前一日"
+                      : period === "30d"
+                        ? "较前30日"
+                        : "较前一年"
+                  }
+                  value={
+                    !revenue || period === "1y"
+                      ? "--"
+                      : `${(period === "day" ? revenue.diffDay : revenue.diff) >= 0 ? "+" : ""}${formatCny(
+                          period === "day" ? revenue.diffDay : revenue.diff,
+                        )}`
+                  }
+                  tone="up"
+                />
+                <RevenueMetric
+                  label="可提现收益"
+                  value={formatCny(revenue?.withdraw)}
+                />
+              </div>
+              {incomeSources.length > 0 && (
+                <div className="mt-2.5 flex flex-wrap gap-x-5 gap-y-1">
+                  {incomeSources.map((s) => (
+                    <div
+                      key={s.name}
+                      className="flex items-baseline gap-1.5"
+                      title={s.state === 1 ? "已更新" : "待更新"}>
+                      <span className="text-[10.5px] text-muted-foreground">
+                        {s.name}
+                      </span>
+                      <span className="text-[11.5px] font-semibold tabular-nums">
+                        {formatCny(s.amount)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
         <Button
