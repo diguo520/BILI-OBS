@@ -369,72 +369,73 @@ export function Overview({ onNavigate }: OverviewProps) {
         </section>
       </div>
 
-      <section className="flex min-h-[104px] flex-1 items-center gap-5 rounded-xl border border-border bg-card px-4 py-3">
-        <div className="min-w-0 flex-1">
-          <div className="mb-2 flex items-center gap-2">
-            <h3 className="text-[12.5px] font-semibold text-foreground/90">
-              收益数据概览
-            </h3>
-            <span className="text-[10px] text-muted-foreground">
-              {areaName || "未选择分区"} · 直播间 {roomId}
-            </span>
+            <section className="flex min-w-0 flex-1 flex-col gap-2.5 rounded-xl border border-border bg-card px-4 py-3">
+        <div className="flex items-center gap-2">
+          <h3 className="text-[12.5px] font-semibold text-foreground/90">
+            收益数据概览
+          </h3>
+          <span className="truncate text-[10px] text-muted-foreground">
+            {areaName || "未选择分区"} · 直播间 {roomId}
+          </span>
+          <div className="ml-auto flex shrink-0 items-center gap-2">
             <button
-              className="ml-auto text-[10px] text-muted-foreground hover:text-foreground"
+              type="button"
+              className="text-[10px] text-muted-foreground hover:text-foreground"
               title="复制收益接口原始返回，便于核对字段"
               onClick={() =>
                 void navigator.clipboard.writeText(JSON.stringify(incomeRaw, null, 2))
               }>
               原始数据
             </button>
-            <div className="flex gap-1 rounded-md bg-muted p-0.5">
-              <button
-                onClick={() => setPeriod("day")}
-                className={cn(
-                  "h-5 rounded px-2 text-[10px]",
-                  period === "day"
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground",
-                )}>
-                当日
-              </button>
-              <button
-                onClick={() => setPeriod("30d")}
-                className={cn(
-                  "h-5 rounded px-2 text-[10px]",
-                  period === "30d"
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground",
-                )}>
-                近30日
-              </button>
-              <button
-                onClick={() => setPeriod("1y")}
-                className={cn(
-                  "h-5 rounded px-2 text-[10px]",
-                  period === "1y"
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground",
-                )}>
-                近1年
-              </button>
+            <div className="flex gap-0.5 rounded-md bg-muted p-0.5">
+              {(
+                [
+                  ["day", "当日"],
+                  ["30d", "近30日"],
+                  ["1y", "近1年"],
+                ] as const
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setPeriod(key)}
+                  className={cn(
+                    "h-6 rounded px-2.5 text-[10.5px] transition-colors",
+                    period === key
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}>
+                  {label}
+                </button>
+              ))}
             </div>
+            <Button
+              className="h-7 rounded-lg px-3 text-[11px]"
+              onClick={() =>
+                void openUrl("https://member.bilibili.com/york/income/")
+              }>
+              去提现
+              <HugeiconsIcon icon={ArrowUpRight} className="size-3.5" />
+            </Button>
           </div>
+        </div>
 
-          {revenueError ? (
-            <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-              收益数据暂不可用，请确认账号已开通创作激励
-              <Button
-                variant="link"
-                className="h-auto p-0 text-[11px]"
-                onClick={() =>
-                  void openUrl("https://member.bilibili.com/york/income/")
-                }>
-                前往创作中心
-              </Button>
-            </div>
-          ) : (
-            <>
-              <div className="flex items-end gap-8">
+        {revenueError ? (
+          <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+            收益数据暂不可用，请确认账号已开通创作激励
+            <Button
+              variant="link"
+              className="h-auto p-0 text-[11px]"
+              onClick={() =>
+                void openUrl("https://member.bilibili.com/york/income/")
+              }>
+              前往创作中心
+            </Button>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="min-w-0 rounded-lg border border-border bg-muted/40 px-3 py-2.5">
                 <RevenueMetric
                   label={
                     period === "day"
@@ -452,6 +453,8 @@ export function Overview({ onNavigate }: OverviewProps) {
                   )}
                   big
                 />
+              </div>
+              <div className="min-w-0 rounded-lg border border-border bg-muted/40 px-3 py-2.5">
                 <RevenueMetric
                   label={
                     period === "day"
@@ -464,10 +467,10 @@ export function Overview({ onNavigate }: OverviewProps) {
                     !revenue
                       ? "--"
                       : `${(period === "day"
-                          ? revenue.diffDay
-                          : period === "30d"
-                            ? revenue.diff
-                            : revenue.diffYear) >= 0
+                            ? revenue.diffDay
+                            : period === "30d"
+                              ? revenue.diff
+                              : revenue.diffYear) >= 0
                           ? "+"
                           : ""
                         }${formatCny(
@@ -480,48 +483,48 @@ export function Overview({ onNavigate }: OverviewProps) {
                   }
                   tone="up"
                 />
+              </div>
+              <div className="min-w-0 rounded-lg border border-border bg-muted/40 px-3 py-2.5">
                 <RevenueMetric
                   label="可提现收益"
                   value={formatCny(revenue?.withdraw)}
                 />
               </div>
-              {incomeDetails.length > 0 && (
-                <div className="mt-3 flex flex-wrap items-start gap-x-4 gap-y-2">
-                  {incomeDetails.map((item) => (
-                    <div
-                      key={item.enum}
-                      className="flex min-w-[52px] flex-col gap-0.5"
-                      title={item.state === 0 ? "待更新" : "已更新"}>
-                      <span className="text-[10.5px] text-muted-foreground">
+            </div>
+
+            {incomeDetails.length > 0 && (
+              <div className="grid grid-cols-6 gap-2 border-t border-border/60 pt-2.5">
+                {incomeDetails.map((item) => (
+                  <div
+                    key={item.enum}
+                    className="flex min-w-0 flex-col gap-1 rounded-lg border border-border bg-muted/40 px-2.5 py-2.5"
+                    title={item.state === 0 ? "待更新" : "已更新"}>
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <span
+                        className={cn(
+                          "size-1.5 shrink-0 rounded-full",
+                          item.state === 0 ? "bg-warning" : "bg-success",
+                        )}
+                      />
+                      <span className="truncate text-[10.5px] text-muted-foreground">
                         {INCOME_SOURCE_NAMES[item.enum ?? -1] ?? "其他"}
                       </span>
-                      <span className="text-[12px] leading-tight font-semibold tabular-nums">
-                        {formatCny(
-                          period === "day"
-                            ? item.daily_amt
-                            : period === "30d"
-                              ? item.thirty_days_amt
-                              : item.annual_amt,
-                        )}
-                      </span>
-                      <span className="text-[9.5px] leading-tight text-muted-foreground">
-                        {item.state === 0 ? "待更新" : "已更新"}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-        </div>
-        <Button
-          className="h-8 shrink-0 rounded-lg px-4 text-[11.5px]"
-          onClick={() =>
-            void openUrl("https://member.bilibili.com/york/income/")
-          }>
-          去提现
-          <HugeiconsIcon icon={ArrowUpRight} className="size-3.5" />
-        </Button>
+                    </span>
+                    <span className="text-[17px] leading-none font-semibold tabular-nums">
+                      {formatCny(
+                        period === "day"
+                          ? item.daily_amt
+                          : period === "30d"
+                            ? item.thirty_days_amt
+                            : item.annual_amt,
+                      )}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
       </section>
 
       <LiveVerifyDialog
