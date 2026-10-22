@@ -67,7 +67,8 @@ fn mock_pcm(text_len: usize, sample_rate: i32) -> Vec<u8> {
 
 /// 调用百炼流式合成，返回完整 PCM
 async fn synthesize_ws(req: &TtsRequest) -> Result<Vec<u8>, String> {
-    let url = std::env::var("REA_TTS_WS_URL").unwrap_or_else(|_| DEFAULT_WS_URL.to_string());
+    let url =
+        std::env::var("BILI_OBS_TTS_WS_URL").unwrap_or_else(|_| DEFAULT_WS_URL.to_string());
     let mut request = url
         .into_client_request()
         .map_err(|e| format!("构造请求失败: {e}"))?;
@@ -117,6 +118,12 @@ async fn synthesize_ws(req: &TtsRequest) -> Result<Vec<u8>, String> {
     while let Some(msg) = ws.next().await {
         let msg = msg.map_err(|e| format!("接收失败: {e}"))?;
         let text = match msg {
+            // 音频以二进制帧直接下发（无 base64 包装），必须原样累积 ——
+            // 只取 JSON 的 audio 字段会一字节都拿不到，表现为「没声音」。
+            Message::Binary(bytes) => {
+                pcm.extend_from_slice(&bytes);
+                continue;
+            }
             Message::Text(t) => t.to_string(),
             Message::Close(_) => break,
             _ => continue,
@@ -172,7 +179,7 @@ async fn synthesize_ws(req: &TtsRequest) -> Result<Vec<u8>, String> {
         return Err("文本未发送成功".to_string());
     }
     if pcm.is_empty() {
-        return Err("未收到音频数据".to_string());
+        return Err("未收到音频数据（服务端未返回任何二进制音频帧）".to_string());
     }
     Ok(pcm)
 }
