@@ -23,7 +23,7 @@ import {
   getViolationRecords,
   type ViolationRecord,
 } from "@/api/live";
-import type { IncomeSource } from "@/api/earnings";
+import { INCOME_SOURCE_NAMES, type IncomeDetail } from "@/api/earnings";
 import {
   formatCny,
   getIncomeSummary,
@@ -46,6 +46,8 @@ interface RevenueState {
   daily: number;
   /** 较前一日（分） */
   diffDay: number;
+  /** 较前一年（分） */
+  diffYear: number;
   thirty: number;
   diff: number;
   withdraw: number;
@@ -82,8 +84,8 @@ export function Overview({ onNavigate }: OverviewProps) {
   const [violations, setViolations] = useState<ViolationRecord[] | null>(null);
   const [violationOpen, setViolationOpen] = useState(false);
   const [revenue, setRevenue] = useState<RevenueState | null>(null);
-  /** 收入来源明细，接口有返回时才渲染 */
-  const [incomeSources, setIncomeSources] = useState<IncomeSource[]>([]);
+  /** 收入来源明细（detail），有返回时才渲染 */
+  const [incomeDetails, setIncomeDetails] = useState<IncomeDetail[]>([]);
   /** 收益接口原始返回，供「原始数据」按钮复制核对字段 */
   const [incomeRaw, setIncomeRaw] = useState<unknown>(null);
   const [revenueError, setRevenueError] = useState(false);
@@ -155,25 +157,15 @@ export function Overview({ onNavigate }: OverviewProps) {
         setRevenue({
           daily: summary?.daily_amt ?? 0,
           diffDay: summary?.over_last_day_amt ?? 0,
+          diffYear: summary?.over_last_year_amt ?? 0,
           thirty: summary?.thirty_days_amt ?? 0,
           diff: summary?.over_last_thirty_days_amt ?? 0,
           annual: summary?.annual_amt ?? 0,
           withdraw: withdraw.withdraw_total ?? 0,
         });
         setIncomeRaw(income);
-        // 收入来源：字段名以线上返回为准，逐层容错；拿不到就不渲染该区块
-        const raw = income.sources ?? income.income_source;
-        const list = Array.isArray(raw) ? raw : [];
-        setIncomeSources(
-          list
-            .filter((x): x is Record<string, unknown> => !!x && typeof x === "object")
-            .map((o) => ({
-              name: String(o.name ?? o.title ?? o.source ?? ""),
-              amount: Number(o.amount ?? o.money ?? o.total ?? 0),
-              state: Number(o.state ?? o.status ?? 0),
-            }))
-            .filter((s) => s.name),
-        );
+        // 收入来源明细：实测字段为 detail，拿不到就不渲染该区块
+        setIncomeDetails(Array.isArray(income.detail) ? income.detail : []);
         setRevenueError(false);
       } catch {
         if (!cancelled) setRevenueError(true);
@@ -469,10 +461,21 @@ export function Overview({ onNavigate }: OverviewProps) {
                         : "较前一年"
                   }
                   value={
-                    !revenue || period === "1y"
+                    !revenue
                       ? "--"
-                      : `${(period === "day" ? revenue.diffDay : revenue.diff) >= 0 ? "+" : ""}${formatCny(
-                          period === "day" ? revenue.diffDay : revenue.diff,
+                      : `${(period === "day"
+                          ? revenue.diffDay
+                          : period === "30d"
+                            ? revenue.diff
+                            : revenue.diffYear) >= 0
+                          ? "+"
+                          : ""
+                        }${formatCny(
+                          period === "day"
+                            ? revenue.diffDay
+                            : period === "30d"
+                              ? revenue.diff
+                              : revenue.diffYear,
                         )}`
                   }
                   tone="up"
@@ -482,18 +485,27 @@ export function Overview({ onNavigate }: OverviewProps) {
                   value={formatCny(revenue?.withdraw)}
                 />
               </div>
-              {incomeSources.length > 0 && (
-                <div className="mt-2.5 flex flex-wrap gap-x-5 gap-y-1">
-                  {incomeSources.map((s) => (
+              {incomeDetails.length > 0 && (
+                <div className="mt-3 flex flex-wrap items-start gap-x-4 gap-y-2">
+                  {incomeDetails.map((item) => (
                     <div
-                      key={s.name}
-                      className="flex items-baseline gap-1.5"
-                      title={s.state === 1 ? "已更新" : "待更新"}>
+                      key={item.enum}
+                      className="flex min-w-[52px] flex-col gap-0.5"
+                      title={item.state === 0 ? "待更新" : "已更新"}>
                       <span className="text-[10.5px] text-muted-foreground">
-                        {s.name}
+                        {INCOME_SOURCE_NAMES[item.enum ?? -1] ?? "其他"}
                       </span>
-                      <span className="text-[11.5px] font-semibold tabular-nums">
-                        {formatCny(s.amount)}
+                      <span className="text-[12px] leading-tight font-semibold tabular-nums">
+                        {formatCny(
+                          period === "day"
+                            ? item.daily_amt
+                            : period === "30d"
+                              ? item.thirty_days_amt
+                              : item.annual_amt,
+                        )}
+                      </span>
+                      <span className="text-[9.5px] leading-tight text-muted-foreground">
+                        {item.state === 0 ? "待更新" : "已更新"}
                       </span>
                     </div>
                   ))}
