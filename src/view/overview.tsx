@@ -18,7 +18,7 @@ import { useUpDays } from "@/hooks/use-up-days";
 import { LiveVerifyDialog } from "@/components/live-verify-dialog";
 import { cn } from "@/lib/utils";
 import type { TabType } from "@/components/app-sidebar";
-import { getFanStat } from "@/api/user";
+import { getFanStat, getUserInfo } from "@/api/user";
 import {
   getViolationRecords,
   type ViolationRecord,
@@ -80,14 +80,34 @@ export function Overview({ onNavigate }: OverviewProps) {
 
   const [now, setNow] = useState(() => Date.now());
   const [fans, setFans] = useState<number | null>(null);
+  /** 等级经验与钱包（来自 /x/web-interface/nav） */
+  const [levelInfo, setLevelInfo] = useState<{
+    level: number;
+    /** 当前等级最低经验 */
+    min: number;
+    exp: number;
+    nextExp: number;
+  } | null>(null);
+  const [wallet, setWallet] = useState<{ bcoin: number; coins: number } | null>(
+    null,
+  );
   const [fanDelta, setFanDelta] = useState(0);
   const [violations, setViolations] = useState<ViolationRecord[] | null>(null);
   const [violationOpen, setViolationOpen] = useState(false);
   const [revenue, setRevenue] = useState<RevenueState | null>(null);
+  /**
+   * 等级进度 = 当前等级内的进度。
+   * B站等级经验是按等级分段的（current_min → next_exp），所以不能直接用 exp / next_exp。
+   */
+  const levelPercent = (() => {
+    if (!levelInfo || levelInfo.nextExp <= 0) return 0;
+    const span = levelInfo.nextExp - levelInfo.min;
+    if (span <= 0) return 100;
+    const done = levelInfo.exp - levelInfo.min;
+    return Math.max(0, Math.min(100, Math.round((done / span) * 100)));
+  })();
   /** 收入来源明细（detail），有返回时才渲染 */
   const [incomeDetails, setIncomeDetails] = useState<IncomeDetail[]>([]);
-  /** 收益接口原始返回，供「原始数据」按钮复制核对字段 */
-  const [incomeRaw, setIncomeRaw] = useState<unknown>(null);
   const [revenueError, setRevenueError] = useState(false);
   const [period, setPeriod] = useState<"day" | "30d" | "1y">("30d");
   const upDays = useUpDays();
@@ -103,7 +123,30 @@ export function Overview({ onNavigate }: OverviewProps) {
     let cancelled = false;
     const load = async () => {
       try {
-        const result = await getFanStat(uid);
+        const [result, nav] = await Promise.all([
+          getFanStat(uid),
+          getUserInfo().catch(() => null),
+        ]);
+        if (nav) {
+          const li = nav.level_info;
+          if (li) {
+            setLevelInfo({
+              level: li.current_level,
+              min: li.current_min,
+              exp: li.current_exp,
+              nextExp:
+                typeof li.next_exp === "number"
+                  ? li.next_exp
+                  : typeof li.next_exp === "string" && /^\d+$/.test(li.next_exp)
+                    ? Number(li.next_exp)
+                    : 0,
+            });
+          }
+          setWallet({
+            bcoin: nav.wallet?.bcoin_balance ?? nav.wallet?.bcoin ?? 0,
+            coins: nav.money ?? 0,
+          });
+        }
         if (cancelled) return;
         const key = `bili-obs-fans-baseline-${uid}`;
         const stored = Number(localStorage.getItem(key));
@@ -163,7 +206,6 @@ export function Overview({ onNavigate }: OverviewProps) {
           annual: summary?.annual_amt ?? 0,
           withdraw: withdraw.withdraw_total ?? 0,
         });
-        setIncomeRaw(income);
         // 收入来源明细：实测字段为 detail，拿不到就不渲染该区块
         setIncomeDetails(Array.isArray(income.detail) ? income.detail : []);
         setRevenueError(false);
@@ -280,6 +322,40 @@ export function Overview({ onNavigate }: OverviewProps) {
               "已登录"
             )}
           </div>
+          {levelInfo && (
+            <div
+              className="flex items-center gap-1.5"
+              title={`LV${levelInfo.level} · 经验 ${levelInfo.exp} / ${levelInfo.nextExp}（本级 ${levelPercent}%）`}>
+              <span className="rounded bg-warning/15 px-1 py-px text-[9.5px] font-bold text-warning">
+                LV{levelInfo.level}
+              </span>
+              <span className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted">
+                <span
+                  className="block h-full rounded-full bg-warning"
+                  style={{ width: `${levelPercent}%` }}
+                />
+              </span>
+              <span className="shrink-0 text-[9.5px] text-muted-foreground tabular-nums">
+                {levelPercent}%
+              </span>
+            </div>
+          )}
+          {wallet && (
+            <div className="flex items-center gap-3 text-[10.5px] font-semibold tabular-nums">
+              <span className="inline-flex items-center gap-1" title="B币">
+                <span className="grid size-3.5 place-items-center rounded-full bg-[#f5c451] text-[8px] font-bold text-black">
+                  B
+                </span>
+                <span>{wallet.bcoin}</span>
+              </span>
+              <span className="inline-flex items-center gap-1" title="硬币">
+                <span className="grid size-3.5 place-items-center rounded-full bg-[#00aeec] text-[8px] font-bold text-white">
+                  币
+                </span>
+                <span>{wallet.coins}</span>
+              </span>
+            </div>
+          )}
           <div className="flex flex-wrap gap-1.5">
             <span className="rounded-full border border-border bg-muted/40 px-2 py-0.5 text-[10.5px] text-muted-foreground">
               房间 {roomId}
@@ -378,15 +454,6 @@ export function Overview({ onNavigate }: OverviewProps) {
             {areaName || "未选择分区"} · 直播间 {roomId}
           </span>
           <div className="ml-auto flex shrink-0 items-center gap-2">
-            <button
-              type="button"
-              className="text-[10px] text-muted-foreground hover:text-foreground"
-              title="复制收益接口原始返回，便于核对字段"
-              onClick={() =>
-                void navigator.clipboard.writeText(JSON.stringify(incomeRaw, null, 2))
-              }>
-              原始数据
-            </button>
             <div className="flex gap-0.5 rounded-md bg-muted p-0.5">
               {(
                 [
