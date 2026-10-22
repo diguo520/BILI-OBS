@@ -1,8 +1,9 @@
 import type { CommentStyleConfig } from "@/types/config";
 import type { Comment } from "@/types/comment";
-import { getMessageStyle, getNameStyle } from "@/lib/comment-style";
+import { COMMENT_PRESETS, getMessageStyle, getNameStyle } from "@/lib/comment-style";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
+import { cn } from "@/lib/utils";
 
 interface CommentStyleEditorProps {
   style: CommentStyleConfig;
@@ -36,6 +37,30 @@ export function CommentStyleEditor({
       </div>
 
       <div>
+        <div className="mb-1 text-[10.5px] text-muted-foreground">文字样式</div>
+        <div className="grid grid-cols-2 gap-1.5">
+          {COMMENT_PRESETS.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              title={item.desc}
+              onClick={() => patch({ preset: item.id })}
+              className={cn(
+                "rounded-md border px-2 py-1.5 text-left text-[10.5px] transition-colors",
+                style.preset === item.id
+                  ? "border-primary bg-primary/10 text-foreground"
+                  : "border-border text-foreground/85 hover:border-primary/40",
+              )}>
+              {item.label}
+            </button>
+          ))}
+        </div>
+        <div className="mt-1 text-[9.5px] text-muted-foreground">
+          {COMMENT_PRESETS.find((item) => item.id === style.preset)?.desc}
+        </div>
+      </div>
+
+      <div>
         <div className="mb-1 flex items-center justify-between text-[10.5px] text-muted-foreground">
           <span>字号</span>
           <span>{style.fontSize}px</span>
@@ -49,9 +74,10 @@ export function CommentStyleEditor({
         />
       </div>
 
-      <div className="rounded-lg border border-border p-2.5">
-        <div className="flex items-center gap-2">
-          <span className="flex-1 text-[11px] text-foreground/90">文字阴影</span>
+      {style.preset === "plain" && (
+        <div className="rounded-lg border border-border p-2.5">
+          <div className="flex items-center gap-2">
+            <span className="flex-1 text-[11px] text-foreground/90">文字阴影</span>
           <Switch
             checked={style.shadow.enabled}
             onCheckedChange={(enabled) =>
@@ -111,8 +137,9 @@ export function CommentStyleEditor({
               </div>
             </div>
           </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       <div className="space-y-1.5">
         {(

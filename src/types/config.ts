@@ -40,8 +40,20 @@ export interface CommentRoleColors {
   message: string;
 }
 
+/** 弹幕文字预设样式：解决亮场景白字看不清 */
+export type CommentPreset =
+  | "plain"
+  | "soft"
+  | "outline"
+  | "bold"
+  | "plate"
+  | "glow"
+  | "invert";
+
 export interface CommentStyleConfig {
   fontSize: number;
+  /** 预设样式；旧配置无此字段时按 "plain" 处理 */
+  preset: CommentPreset;
   levelThreshold: number;
   shadow: {
     enabled: boolean;
@@ -55,6 +67,7 @@ export interface CommentStyleConfig {
 
 export const DEFAULT_COMMENT_STYLE: CommentStyleConfig = {
   fontSize: 14,
+  preset: "plain",
   levelThreshold: 20,
   shadow: {
     enabled: false,
