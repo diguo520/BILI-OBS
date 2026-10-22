@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Play, Square } from "@hugeicons/core-free-icons";
+import { Square } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,7 +45,7 @@ function Knob({ label, value, min, max, step, onChange }: { label: string; value
 }
 
 /** 音色头像：抓取失败时退化为首字色块，不影响版面 */
-function VoiceAvatar({ url, name }: { url: string; name: string }) {
+function VoiceAvatar({ url, name, size = 48 }: { url: string; name: string; size?: number }) {
   const [src, setSrc] = useState<string | null>(null);
 
   useEffect(() => {
@@ -59,8 +59,14 @@ function VoiceAvatar({ url, name }: { url: string; name: string }) {
   }, [url]);
 
   return (
-    <span className="grid size-5 shrink-0 place-items-center overflow-hidden rounded-[5px] bg-muted text-[9px] text-muted-foreground">
-      {src ? <img src={src} alt="" className="size-full object-cover" /> : name.slice(0, 1)}
+    <span
+      className="grid shrink-0 place-items-center overflow-hidden rounded-lg bg-muted text-[11px] text-muted-foreground"
+      style={{ width: size, height: size }}>
+      {src ? (
+        <img src={src} alt={name} className="size-full object-cover" />
+      ) : (
+        name.slice(0, 1)
+      )}
     </span>
   );
 }
@@ -81,21 +87,19 @@ export function TtsSettings() {
   const speakTest = useTtsStore((s) => s.speakTest);
   const stopAll = useTtsStore((s) => s.stopAll);
 
-  const [busy, setBusy] = useState(false);
-
   const setTts = (patch: Partial<TtsConfig>) => updateConfig({ tts: { ...tts, ...patch } });
   const setRules = (patch: Partial<TtsRules>) => updateConfig({ tts: { ...tts, rules: { ...tts.rules, ...patch } } });
 
-  /** 试听固定读这一句，界面不提供自定义文本 */
+  /** 试听内容固定，界面上不提供自定义文本 */
   const TEST_TEXT = "欢迎使用BILI OBS";
 
-  const runTest = async () => {
-    if (busy) return;
-    setBusy(true);
+  /** 点音色头像 = 选用该音色并立即试听 */
+  const previewVoice = async (voice: string, model: string) => {
+    setTts({ voice, model });
     try {
       await speakTest(TEST_TEXT);
-    } finally {
-      setBusy(false);
+    } catch (err) {
+      console.error("试听失败", err);
     }
   };
 
@@ -135,7 +139,7 @@ export function TtsSettings() {
             语音播报设置
           </h1>
           <span className="truncate text-[10.5px] text-muted-foreground">
-            系统默认输出 · OBS 桌面音频采集
+            点音色头像即可试听 · 系统默认输出 · OBS 桌面音频采集
           </span>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
@@ -156,7 +160,7 @@ export function TtsSettings() {
 
       <div className="grid shrink-0 grid-cols-2 gap-2.5">
         <Card title="语音引擎">
-          <div className="grid grid-cols-3 gap-2.5">
+          <div className="grid grid-cols-2 gap-2.5">
             <div className="min-w-0">
               <div className="text-[10.5px] text-muted-foreground">API Key</div>
               <Input type="password" placeholder="sk-..." className="mt-1 h-7 px-2 text-[11.5px]" value={tts.apiKey} onChange={(e) => setTts({ apiKey: e.target.value.trim() })} />
@@ -165,18 +169,6 @@ export function TtsSettings() {
               <div className="text-[10.5px] text-muted-foreground">模型</div>
               <Input className="mt-1 h-7 px-2 text-[11.5px]" value={tts.model} onChange={(e) => setTts({ model: e.target.value.trim() })} />
             </div>
-            <div className="min-w-0">
-              <div className="text-[10.5px] text-muted-foreground">试听</div>
-              <Button
-                size="sm"
-                className="mt-1 h-7 w-full px-2 py-0 text-[11.5px]"
-                disabled={busy}
-                title="固定朗读：欢迎使用 BILI OBS"
-                onClick={runTest}>
-                <HugeiconsIcon icon={Play} className="size-3" />
-                试听
-              </Button>
-            </div>
           </div>
           <div className="mt-2 flex items-center gap-2 text-[10.5px] text-muted-foreground">
             <Button size="sm" variant="outline" className="h-6 shrink-0 px-2 py-0 text-[11px]" disabled={!speaking && queueLen === 0} onClick={stopAll}>
@@ -184,7 +176,7 @@ export function TtsSettings() {
               停止清空
             </Button>
             <span className="truncate" title={lastError ?? undefined}>
-              {lastError ? "错误：" + lastError : "跳过：" + (lastSkipReason ?? "—")}
+              {lastError ? "错误：" + lastError : "跳过：" + (lastSkipReason ?? "无")}
             </span>
           </div>
         </Card>
@@ -207,27 +199,22 @@ export function TtsSettings() {
         </Card>
       </div>
 
-      <Card title={"音色（" + VOICES.length + "）"} className="shrink-0">
-        <div className="grid grid-cols-5 gap-1.5 pb-0.5">
+      <Card title={"音色（" + VOICES.length + "）· 点头像试听"} className="shrink-0">
+        <div className="grid grid-cols-9 gap-1.5">
           {VOICES.map((v) => {
             const active = tts.voice === v.officialVoice;
             return (
               <button
                 key={v.officialVoice}
                 type="button"
-                title={v.desc + " · " + v.officialVoice}
-                onClick={() => setTts({ voice: v.officialVoice, model: v.model })}
+                aria-label={v.name}
+                title={v.name + " · " + v.desc + " · " + v.officialVoice}
+                onClick={() => void previewVoice(v.officialVoice, v.model)}
                 className={cn(
-                  "flex h-[28px] items-center gap-2 overflow-hidden rounded-md border px-2 text-left transition-colors",
+                  "flex h-[56px] items-center justify-center overflow-hidden rounded-lg border transition-colors",
                   active ? "border-primary bg-primary/10" : "border-border bg-card hover:border-primary/40",
                 )}>
-                <VoiceAvatar url={v.icon} name={v.name} />
-                <span className="flex min-w-0 flex-1 flex-col justify-center">
-                  <span className="truncate text-[10.5px] leading-tight font-medium">{v.name}</span>
-                  <span className="truncate text-[9px] leading-tight text-muted-foreground">
-                    {v.officialVoice}
-                  </span>
-                </span>
+                <VoiceAvatar url={v.icon} name={v.name} size={48} />
               </button>
             );
           })}

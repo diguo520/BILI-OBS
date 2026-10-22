@@ -283,6 +283,8 @@ export const useTtsStore = create<TtsState>((set, get) => ({
 
   speakTest: async (text) => {
     const cfg = getTtsConfig();
+    // 连点多个音色时打断上一次试听，避免叠加
+    pcmPlayer.stop();
     const audio = await synthesize(text);
     set({ mockMode: audio.mock });
     await pcmPlayer.play(audio.pcmBase64, cfg.volume / 100, audio.sampleRate);
