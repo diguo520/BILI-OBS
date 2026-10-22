@@ -26,3 +26,6 @@ src/preview.tsx
 *.njsproj
 *.sln
 *.sw?
+
+# 视觉校验工具的缓存目录
+.dsh-vision-router/
