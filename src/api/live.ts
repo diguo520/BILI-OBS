@@ -122,6 +122,50 @@ export async function getRoomId(uid: number): Promise<RoomId> {
   });
 }
 
+/** 直播间状态（公开接口，无需登录） */
+export interface RoomLiveInfo {
+  /** 0 未开播 / 1 直播中 / 2 轮播 */
+  live_status?: number;
+  /** 当前场次开始时间（北京时间字符串），未开播时为 0000-00-00 00:00:00 */
+  live_time?: string;
+}
+
+export async function getRoomLiveInfo(roomId: number): Promise<RoomLiveInfo> {
+  return request<RoomLiveInfo>(
+    BASE_URL,
+    `/room/v1/Room/get_info?room_id=${roomId}`,
+    {
+      headers: {
+        Origin: BASE_URL,
+      },
+    },
+  );
+}
+
+/**
+ * 把直播间的 live_time 解析成毫秒时间戳。
+ *
+ * live_time 是「北京时间、无时区标记」的字符串。JS 的 new Date() 会按**本机时区**
+ * 解析它，因此在非中国时区的机器上会偏差数小时 —— 这里显式按 UTC+8 计算。
+ * 未开播时接口返回 0000-00-00 00:00:00，按 null 处理。
+ */
+export function parseRoomLiveTime(liveTime?: string): number | null {
+  if (!liveTime) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/.exec(liveTime.trim());
+  if (!m) return null;
+  const year = Number(m[1]);
+  if (year < 2000) return null;
+  const ms = Date.UTC(
+    year,
+    Number(m[2]) - 1,
+    Number(m[3]),
+    Number(m[4]) - 8,
+    Number(m[5]),
+    Number(m[6]),
+  );
+  return Number.isFinite(ms) ? ms : null;
+}
+
 export async function getAreaList(): Promise<ParentArea[]> {
   return request<ParentArea[]>(
     BASE_URL,

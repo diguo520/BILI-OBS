@@ -21,8 +21,7 @@ import type { TabType } from "@/components/app-sidebar";
 import { getFanStat, getUserInfo } from "@/api/user";
 import {
   getViolationRecords,
-  type ViolationRecord,
-} from "@/api/live";
+  type ViolationRecord, getRoomLiveInfo, parseRoomLiveTime,} from "@/api/live";
 import { INCOME_SOURCE_NAMES, type IncomeDetail } from "@/api/earnings";
 import {
   formatCny,
@@ -79,6 +78,16 @@ export function Overview({ onNavigate }: OverviewProps) {
   } = useLiveControl();
 
   const [now, setNow] = useState(() => Date.now());
+  /**
+   * 直播间真实状态（服务端为准）。
+   * 「本场时长」原来只依据本地点播记录 liveStartedAt，所以只要不是通过本应用
+   * 开始直播（例如在B站网页/OBS/手机上开的播），或在直播中途重启过应用，
+   * 起始时间就是 null，时长永远显示 --:--:--。
+   */
+  const [roomLive, setRoomLive] = useState<{
+    live: boolean;
+    start: number | null;
+  }>({ live: false, start: null });
   const [fans, setFans] = useState<number | null>(null);
   /** 等级经验与钱包（来自 /x/web-interface/nav） */
   const [levelInfo, setLevelInfo] = useState<{
@@ -221,16 +230,45 @@ export function Overview({ onNavigate }: OverviewProps) {
     };
   }, []);
 
+  useEffect(() => {
+    if (!roomId) return;
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const info = await getRoomLiveInfo(roomId);
+        if (cancelled) return;
+        const live = info?.live_status === 1;
+        setRoomLive({
+          live,
+          start: live ? parseRoomLiveTime(info?.live_time) : null,
+        });
+      } catch {
+        // 接口失败时保留上一次结果，交给本地记录兜底
+      }
+    };
+    void load();
+    const timer = setInterval(() => void load(), 30_000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [roomId]);
+
   const areaName = useMemo(() => {
     const parent = areaList.find((p) => p.id === categoryId);
     const child = parent?.list.find((a) => a.id === areaId);
     return [parent?.name, child?.name].filter(Boolean).join(" · ");
   }, [areaList, categoryId, areaId]);
 
-  const duration = liveStartedAt
-    ? Math.max(0, Math.floor((now - liveStartedAt) / 1000))
+  /**
+   * 起点优先用服务端返回的真实开播时间，这样无论是谁、在哪里开的播，
+   * 甚至在直播中途重启应用，时长都是对的；服务端尚未反映（刚开播）时退回本地记录。
+   */
+  const sessionStart = roomLive.start ?? liveStartedAt ?? null;
+  const duration = sessionStart
+    ? Math.max(0, Math.floor((now - sessionStart) / 1000))
     : 0;
-  const durationText = liveStartedAt
+  const durationText = sessionStart
     ? [
         Math.floor(duration / 3600),
         Math.floor((duration % 3600) / 60),
@@ -379,7 +417,7 @@ export function Overview({ onNavigate }: OverviewProps) {
               icon={Clock}
               label="本场时长"
               value={durationText}
-              accent={isOpenLive}
+              accent={isOpenLive || roomLive.live}
             />
             <DataTile
               icon={Users}
