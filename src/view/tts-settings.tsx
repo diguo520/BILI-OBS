@@ -227,8 +227,7 @@ export function TtsSettings() {
               <button
                 key={v.officialVoice}
                 type="button"
-                aria-label={v.name}
-                title={v.name + " · " + v.desc + " · " + v.officialVoice}
+
                 onClick={() => void previewVoice(v.officialVoice)}
                 className={cn(
                   "flex h-[60px] items-center justify-center overflow-hidden rounded-lg border transition-colors",

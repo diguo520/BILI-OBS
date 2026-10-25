@@ -111,7 +111,7 @@ export const VOICES: TtsVoice[] = [
     model: "cosyvoice-v3-flash",
     sampleRate: 16000,
     defaults: { speechRate: 12, pitchRate: 1, volume: 100 },
-    icon: "https://obh-live.oss-cn-shanghai.aliyuncs.com/admin/202603/a0c8877590dd42f90beade4a7563af48.webp",
+    icon: "/voices/longjiaxin_v3.webp",
   },
   {
     id: 42,
@@ -144,7 +144,7 @@ export const VOICES: TtsVoice[] = [
     model: "cosyvoice-v3-flash",
     sampleRate: 16000,
     defaults: { speechRate: 12, pitchRate: 1, volume: 100 },
-    icon: "https://obh-live.oss-cn-shanghai.aliyuncs.com/admin/202603/a0c8877590dd42f90beade4a7563af48.webp",
+    icon: "/voices/longjiayi_v3.svg",
   },
   {
     id: 45,
@@ -155,7 +155,7 @@ export const VOICES: TtsVoice[] = [
     model: "cosyvoice-v3-flash",
     sampleRate: 16000,
     defaults: { speechRate: 12, pitchRate: 1, volume: 100 },
-    icon: "https://obh-live.oss-cn-shanghai.aliyuncs.com/admin/202603/322581673fe350c9b1a78539290b3538.webp",
+    icon: "/voices/longanyue_v3.webp",
   },
   {
     id: 46,
@@ -166,7 +166,7 @@ export const VOICES: TtsVoice[] = [
     model: "cosyvoice-v3-flash",
     sampleRate: 16000,
     defaults: { speechRate: 12, pitchRate: 1, volume: 100 },
-    icon: "https://obh-live.oss-cn-shanghai.aliyuncs.com/admin/202603/226d2b55b464b4a8658aae928e5c9ce7.webp",
+    icon: "/voices/longlaotie_v3.webp",
   },
   {
     id: 47,
@@ -177,7 +177,7 @@ export const VOICES: TtsVoice[] = [
     model: "cosyvoice-v3-flash",
     sampleRate: 16000,
     defaults: { speechRate: 12, pitchRate: 1, volume: 100 },
-    icon: "https://obh-live.oss-cn-shanghai.aliyuncs.com/admin/202603/0c144725677d1029c033f3df015660b9.webp",
+    icon: "/voices/longshange_v3.webp",
   },
   {
     id: 48,
@@ -188,7 +188,7 @@ export const VOICES: TtsVoice[] = [
     model: "cosyvoice-v3-flash",
     sampleRate: 16000,
     defaults: { speechRate: 12, pitchRate: 1, volume: 100 },
-    icon: "https://obh-live.oss-cn-shanghai.aliyuncs.com/admin/202603/9a5682b42e1bd083fbc2c039447b550e.webp",
+    icon: "/voices/longanmin_v3.webp",
   },
 ];
 
