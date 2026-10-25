@@ -25,9 +25,14 @@ async function fetchIcon(url: string): Promise<string | null> {
   }
 }
 
-/** 取音色头像的 object URL；失败返回 null（调用方用文字兜底） */
+/** 取音色头像的 URL；失败返回 null（调用方用文字兜底）。
+ *  本地资源（/voices/…）：直接返回路径本身 —— 它们随应用分发、没有防盗链，
+ *  不能走 tauri http 插件（该插件只放行了外部域名，fetch 相对路径必然失败，
+ *  这正是上一版 6 个头像全部回退成首字的原因）。
+ *  外链（https://…）：仍走 http 插件带 Referer 抓取（OBH 防盗链）。 */
 export function loadVoiceIcon(url: string): Promise<string | null> {
   if (!url) return Promise.resolve(null);
+  if (url.startsWith("/")) return Promise.resolve(url);
   const hit = cache.get(url);
   if (hit) return Promise.resolve(hit);
   const inflight = pending.get(url);
