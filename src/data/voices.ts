@@ -111,7 +111,7 @@ export const VOICES: TtsVoice[] = [
     model: "cosyvoice-v3-flash",
     sampleRate: 16000,
     defaults: { speechRate: 12, pitchRate: 1, volume: 100 },
-    icon: "/voices/longjiaxin_v3.webp",
+    icon: "/voices/longjiaxin_v3.png",
   },
   {
     id: 42,
@@ -144,7 +144,7 @@ export const VOICES: TtsVoice[] = [
     model: "cosyvoice-v3-flash",
     sampleRate: 16000,
     defaults: { speechRate: 12, pitchRate: 1, volume: 100 },
-    icon: "/voices/longjiayi_v3.svg",
+    icon: "/voices/longjiayi_v3.png",
   },
   {
     id: 45,
@@ -155,7 +155,7 @@ export const VOICES: TtsVoice[] = [
     model: "cosyvoice-v3-flash",
     sampleRate: 16000,
     defaults: { speechRate: 12, pitchRate: 1, volume: 100 },
-    icon: "/voices/longanyue_v3.webp",
+    icon: "/voices/longanyue_v3.png",
   },
   {
     id: 46,
@@ -166,7 +166,7 @@ export const VOICES: TtsVoice[] = [
     model: "cosyvoice-v3-flash",
     sampleRate: 16000,
     defaults: { speechRate: 12, pitchRate: 1, volume: 100 },
-    icon: "/voices/longlaotie_v3.webp",
+    icon: "/voices/longlaotie_v3.png",
   },
   {
     id: 47,
@@ -177,7 +177,7 @@ export const VOICES: TtsVoice[] = [
     model: "cosyvoice-v3-flash",
     sampleRate: 16000,
     defaults: { speechRate: 12, pitchRate: 1, volume: 100 },
-    icon: "/voices/longshange_v3.webp",
+    icon: "/voices/longshange_v3.png",
   },
   {
     id: 48,
@@ -188,7 +188,7 @@ export const VOICES: TtsVoice[] = [
     model: "cosyvoice-v3-flash",
     sampleRate: 16000,
     defaults: { speechRate: 12, pitchRate: 1, volume: 100 },
-    icon: "/voices/longanmin_v3.webp",
+    icon: "/voices/longanmin_v3.png",
   },
 ];
 
