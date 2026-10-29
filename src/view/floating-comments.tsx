@@ -11,6 +11,7 @@ import {
   Users,
   VerticalScrollPointIcon,
   X,
+  MousePointerOffIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -170,6 +171,8 @@ export function FloatingComments() {
     const savedOpacity = Number(localStorage.getItem(OPACITY_STORAGE_KEY));
     return savedOpacity >= 0 && savedOpacity <= 100 ? savedOpacity : 80;
   });
+  /** 鼠标穿透开关：开启后整个窗口忽略鼠标事件，点击落到下层（游戏） */
+  const [passthrough, setPassthrough] = useState(false);
   const [newMessage, setNewMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -262,9 +265,35 @@ export function FloatingComments() {
     }
   };
 
+  const togglePassthrough = async () => {
+    const next = !passthrough;
+    try {
+      await getCurrentWindow().setIgnoreCursorEvents(next);
+      setPassthrough(next);
+      if (next) {
+        toast("已开启鼠标穿透 · 关不掉时用托盘菜单「关闭弹幕窗鼠标穿透」");
+      }
+    } catch (error) {
+      toast.error((error as Error).message);
+    }
+  };
+
   useEffect(() => {
     document.body.classList.add("floating-window");
     return () => document.body.classList.remove("floating-window");
+  }, []);
+
+  useEffect(() => {
+    // 每次挂载都从「可交互」开始：穿透状态不持久化，避免残留导致点不到界面
+    void getCurrentWindow().setIgnoreCursorEvents(false);
+    // 托盘菜单「关闭弹幕窗鼠标穿透」会发这个事件，把 UI 状态同步回来
+    const unlisten = getCurrentWindow().listen<boolean>(
+      "comments-passthrough",
+      (event) => setPassthrough(Boolean(event.payload)),
+    );
+    return () => {
+      unlisten.then((dispose) => dispose());
+    };
   }, []);
 
   useEffect(() => {
@@ -379,6 +408,22 @@ export function FloatingComments() {
               })
             }>
             <HugeiconsIcon icon={VerticalScrollPointIcon} />
+          </Button>
+          <Button
+            title={
+              passthrough
+                ? "鼠标穿透：开（界面不可点击，用托盘菜单关闭）"
+                : "鼠标穿透：关（开启后点击会穿透到下层）"
+            }
+            aria-label="鼠标穿透开关"
+            variant="ghost"
+            size="icon"
+            className={cn(
+              "size-7 rounded-sm",
+              passthrough && "bg-primary/15 text-primary",
+            )}
+            onClick={() => void togglePassthrough()}>
+            <HugeiconsIcon icon={MousePointerOffIcon} />
           </Button>
           <Button
             title="隐藏悬浮窗"

@@ -10,7 +10,7 @@ use std::path::PathBuf;
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    AppHandle, Manager, PhysicalPosition, RunEvent, WindowEvent,
+    AppHandle, Emitter, Manager, PhysicalPosition, RunEvent, WindowEvent,
 };
 use tokio::sync::Mutex;
 
@@ -79,8 +79,16 @@ pub fn run() {
 
             let show_item =
                 MenuItem::with_id(app, "show", "显示 BILI OBS", true, None::<&str>)?;
+            // 鼠标穿透的逃生出口：穿透后悬浮窗点不到，用托盘菜单关回来
+            let passthrough_item = MenuItem::with_id(
+                app,
+                "comments-interactive",
+                "关闭弹幕窗鼠标穿透",
+                true,
+                None::<&str>,
+            )?;
             let quit_item = MenuItem::with_id(app, "quit", "退出", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&show_item, &quit_item])?;
+            let menu = Menu::with_items(app, &[&show_item, &passthrough_item, &quit_item])?;
 
             let mut tray_builder = TrayIconBuilder::with_id("bili-obs-tray")
                 .menu(&menu)
@@ -88,6 +96,13 @@ pub fn run() {
                 .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "show" => show_main_window(app),
+                    "comments-interactive" => {
+                        if let Some(window) = app.get_webview_window("comments") {
+                            let _ = window.set_ignore_cursor_events(false);
+                            // 通知前端同步开关状态
+                            let _ = window.emit("comments-passthrough", false);
+                        }
+                    }
                     "quit" => app.exit(0),
                     _ => {}
                 })
