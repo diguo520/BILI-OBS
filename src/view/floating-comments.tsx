@@ -418,10 +418,7 @@ export function FloatingComments() {
             aria-label="鼠标穿透开关"
             variant="ghost"
             size="icon"
-            className={cn(
-              "size-7 rounded-sm",
-              passthrough && "bg-primary/15 text-primary",
-            )}
+            className={cn("size-7 rounded-sm", passthrough && "text-primary")}
             onClick={() => void togglePassthrough()}>
             <HugeiconsIcon icon={MousePointerOffIcon} />
           </Button>
@@ -436,6 +433,15 @@ export function FloatingComments() {
           </Button>
         </div>
       </header>
+
+      {passthrough && (
+        <div className="flex shrink-0 items-center gap-1.5 border-b border-amber-400/25 bg-amber-400/10 px-2.5 py-1.5 text-[11px] leading-4 text-amber-400">
+          <HugeiconsIcon icon={MousePointerOffIcon} className="size-3.5 shrink-0" />
+          <span className="min-w-0 flex-1">
+            鼠标穿透已开启 · 恢复：右键任务栏托盘图标 →「关闭弹幕窗鼠标穿透」，或到主窗口「弹幕」页点「穿透 开/关」
+          </span>
+        </div>
+      )}
 
       {showOpacity && (
         <div className="absolute top-10 right-9 z-20 w-44 rounded-md border border-white/15 bg-popover p-3 text-popover-foreground shadow-lg">

@@ -13,8 +13,10 @@ import {
   Award,
   Anchor,
   ArrowUpRight,
+  MousePointerOffIcon,
 } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
+import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -48,6 +50,25 @@ interface LiveCommentsProps {
 export function LiveComments({ onDetach }: LiveCommentsProps = {}) {
   const [newMessage, setNewMessage] = useState("");
   const [autoScroll, setAutoScroll] = useState(getAutoScrollPreference);
+  /** 悬浮窗鼠标穿透（从这里也能关回来，不必找托盘） */
+  const [commentsPassthrough, setCommentsPassthrough] = useState(false);
+
+  const toggleCommentsPassthrough = async () => {
+    try {
+      const target = await WebviewWindow.getByLabel("comments");
+      if (!target) {
+        toast.error("悬浮窗当前未打开");
+        return;
+      }
+      const next = !commentsPassthrough;
+      await target.setIgnoreCursorEvents(next);
+      // 同步悬浮窗里的开关状态
+      await target.emit("comments-passthrough", next);
+      setCommentsPassthrough(next);
+    } catch (error) {
+      toast.error((error as Error).message);
+    }
+  };
   const [activeTab, setActiveTab] = useState<"all" | "superchat" | "audience">(
     "all",
   );
@@ -322,6 +343,14 @@ export function LiveComments({ onDetach }: LiveCommentsProps = {}) {
               拆分悬浮窗
             </Button>
           )}
+          <Button
+            variant={commentsPassthrough ? "secondary" : "ghost"}
+            size="sm"
+            className="h-7 rounded-lg text-[11px]"
+            onClick={() => void toggleCommentsPassthrough()}>
+            <HugeiconsIcon icon={MousePointerOffIcon} className="size-3.5" />
+            穿透 {commentsPassthrough ? "开" : "关"}
+          </Button>
           <Button
             variant={autoScroll ? "secondary" : "ghost"}
             size="sm"

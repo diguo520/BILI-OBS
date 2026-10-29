@@ -99,8 +99,8 @@ pub fn run() {
                     "comments-interactive" => {
                         if let Some(window) = app.get_webview_window("comments") {
                             let _ = window.set_ignore_cursor_events(false);
-                            // 通知前端同步开关状态
-                            let _ = window.emit("comments-passthrough", false);
+                            // 广播给两个窗口，同步开关状态
+                            let _ = app.emit("comments-passthrough", false);
                         }
                     }
                     "quit" => app.exit(0),
