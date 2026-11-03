@@ -100,8 +100,12 @@ export interface AppConfig {
   categoryId: string;
   areaId: string;
   img_url: string;
-  /** 直播回放下载目录（留空则下载前要求填写） */
-  replaySaveDir: string;
+/** 本地录制：开播自动录制的开关（true 时开播即录、停播即停） */
+  autoRecord: boolean;
+  /** 本地录制保存目录 */
+  recordingSaveDir: string;
+  /** 本地录制用的推流回源地址（开播时由 use-live-control 写入） */
+  recordingStreamUrl: string;
   sub_url: string;
   roomToken: string;
   isOpenLive: boolean;
@@ -126,7 +130,9 @@ export const DEFAULT_CONFIG: AppConfig = {
   categoryId: "",
   areaId: "",
   img_url: "",
-  replaySaveDir: "",
+  autoRecord: false,
+  recordingSaveDir: "",
+  recordingStreamUrl: "",
   sub_url: "",
   roomToken: "",
   isOpenLive: false,

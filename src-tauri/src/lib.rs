@@ -1,5 +1,6 @@
 mod commands;
 mod download;
+mod recorder;
 mod connection;
 mod tts;
 mod utils;
@@ -123,6 +124,7 @@ pub fn run() {
             }
             app.manage(tray_builder.build(app)?);
             app.manage(download::CancelRegistry::default());
+            app.manage(recorder::RecorderState::default());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -135,7 +137,11 @@ pub fn run() {
             download::replay_download_cancel,
             download::replay_ffmpeg_available,
             download::replay_merge,
-            download::replay_cleanup
+            download::replay_cleanup,
+            recorder::recording_start,
+            recorder::recording_stop,
+            recorder::recording_status,
+            recorder::recording_list
         ])
         .build(tauri::generate_context!())
         .expect("error while running tauri application");

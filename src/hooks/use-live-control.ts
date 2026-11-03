@@ -88,6 +88,8 @@ export function useLiveControl() {
             streams,
             isOpenLive: true,
             liveStartedAt: Date.now(),
+            // 本地录制源：推流地址（ffmpeg 拉它等于录自己推出去的画面）
+            recordingStreamUrl: result.data.rtmp?.addr || "",
           });
           toast.success("直播已开始");
           return;
