@@ -73,7 +73,35 @@ export async function request<T>(
     }
   }
 
-  const data = await response.json();
+  /*
+   * 网络层错误防护（2026-11 实测）：B 站网关对部分接口（如回放 AnchorGetReplayList）
+   * 在未登录/Cookie 失效/风控时直接回 HTML 页面（404/412 挑战页）。
+   * 以前直接 response.json() 会抛 "Unexpected token '<', '<!DOCTYPE '..."，
+   * 并连带触发插件的 "ReadableStreamDefaultController.close" 次生错误 —— 用户完全看不懂。
+   * 现在先取文本再判断：非 JSON 一律抛带状态码与片段的可读错误。
+   */
+  const text = await response.text();
+  const looksJson =
+    response.headers.get("content-type")?.toLowerCase().includes("json") ||
+    /^[\s]*[[{]/.test(text);
+  if (!looksJson) {
+    const titleMatch = text.match(/<title>([^<]*)<\/title>/i);
+    const hint = titleMatch?.[1]?.trim() || text.slice(0, 60).replace(/\s+/g, " ");
+    let reason: string;
+    if (response.status === 401 || response.status === 403) {
+      reason = "登录态已失效，请重新扫码登录";
+    } else if (response.status === 412) {
+      reason = "请求被 B 站风控拦截（412），请稍后重试或重新登录";
+    } else if (response.status === 404) {
+      reason = "接口不存在或当前账号无权限（404）";
+    } else {
+      reason = "服务返回了网页而不是数据（HTTP " + response.status + "）";
+    }
+    throw new Error(
+      "请求失败：" + reason + "（" + hint + "）",
+    );
+  }
+  const data = JSON.parse(text);
   console.log(data);
 
   if (raw) {
