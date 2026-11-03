@@ -1,4 +1,5 @@
 mod commands;
+mod download;
 mod connection;
 mod tts;
 mod utils;
@@ -121,6 +122,7 @@ pub fn run() {
                 tray_builder = tray_builder.icon(icon.clone());
             }
             app.manage(tray_builder.build(app)?);
+            app.manage(download::CancelRegistry::default());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -128,7 +130,12 @@ pub fn run() {
             comment_disconnect,
             comment_is_connected,
             tts_synthesize,
-            get_data_dir
+            get_data_dir,
+            download::replay_download,
+            download::replay_download_cancel,
+            download::replay_ffmpeg_available,
+            download::replay_merge,
+            download::replay_cleanup
         ])
         .build(tauri::generate_context!())
         .expect("error while running tauri application");

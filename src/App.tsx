@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { AppSidebar, type TabType } from "@/components/app-sidebar";
+import { ReplayView } from "@/view/replay";
 import { LiveStreamSettings } from "@/view/live-stream-settings";
 import { MoreSettings } from "@/view/more-settings";
 import { Navbar } from "@/components/navbar";
@@ -122,6 +123,7 @@ export default function App() {
                 {activeTab === "manager" && <LiveRoomManager />}
                 {activeTab === "tts" && <TtsSettings />}
                 {activeTab === "data" && <DataCenter />}
+          {activeTab === "replay" && <ReplayView />}
                 {activeTab === "settings" && (
                   <MoreSettings onLogout={handleLogout} />
                 )}

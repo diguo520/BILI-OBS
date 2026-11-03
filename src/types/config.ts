@@ -100,6 +100,8 @@ export interface AppConfig {
   categoryId: string;
   areaId: string;
   img_url: string;
+  /** 直播回放下载目录（留空则下载前要求填写） */
+  replaySaveDir: string;
   sub_url: string;
   roomToken: string;
   isOpenLive: boolean;
@@ -124,6 +126,7 @@ export const DEFAULT_CONFIG: AppConfig = {
   categoryId: "",
   areaId: "",
   img_url: "",
+  replaySaveDir: "",
   sub_url: "",
   roomToken: "",
   isOpenLive: false,

@@ -6,6 +6,7 @@ import {
   Settings,
   ChartHistogramIcon,
   Megaphone01Icon,
+  VideoReplayIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -21,6 +22,7 @@ type TabType =
   | "comments"
   | "data"
   | "tts"
+  | "replay"
   | "settings";
 
 const tabs = [
@@ -30,6 +32,7 @@ const tabs = [
   { id: "comments" as const, label: "弹幕", icon: MessageSquare },
   { id: "tts" as const, label: "语音播报设置", icon: Megaphone01Icon },
   { id: "data" as const, label: "数据中心", icon: ChartHistogramIcon },
+  { id: "replay" as const, label: "直播回放", icon: VideoReplayIcon },
 ];
 
 interface AppSidebarProps {
