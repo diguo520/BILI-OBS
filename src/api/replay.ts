@@ -1,10 +1,19 @@
 /**
  * 直播回放接口。
  *
- * 实测结论（2026-11-03）：B 站的直播回放不是独立体系，而是自动发布到主播账号下的
- * 普通稿件，并带 `is_live_playback = 1` 标记。因此列表走空间搜索接口并按该字段过滤。
+ * 实测结论（2026-11-03，两套独立体系，必须都读）：
  *
- * 已废弃：`/xlive/web-room/v1/record/getRecordList` —— 实测对任何房间都返回 count=0。
+ * ① 云端录制（主播中心「直播回放」页）：`AnchorGetReplayList`
+ *    —— 每场直播都会产生记录，但**是否生成成功**由 B 站转码决定；
+ *    实测该账号 9 场全部 `alarm_info = 录像生成失败`、`getArchiveList` 为空、
+ *    下载接口返回「下载服务调用出错」→ 说明生成失败时既不能看也不能下。
+ *    这套记录**不会**出现在主播的空间稿件里。
+ *
+ * ② 已发布回放（空间稿件）：带 `is_live_playback = 1` 的普通稿件
+ *    —— 只有云端录制**生成成功且发布**后才会出现，可用 playurl 取 DASH 下载。
+ *
+ * 早期踩坑：只读 ② 会漏掉全部云端录制（该账号 ② 最新只到 3 月，而 ① 有 9 场到昨天）；
+ * `/xlive/web-room/v1/record/getRecordList` 已废弃，对任何房间都返回 count=0。
  */
 import { encWbi } from "@/lib/wbi";
 import { request } from "@/lib/api";
@@ -165,4 +174,88 @@ export async function fetchPlayInfo(
     video,
     audio,
   };
+}
+
+/** 云端录制的一条记录（字段取自 AnchorGetReplayList 实测响应） */
+export interface CloudReplay {
+  replayId: number;
+  title: string;
+  cover: string;
+  /** 开播时间（秒） */
+  liveTime: number;
+  /** 录像时长（秒） */
+  duration: number;
+  /** 1 已生成 / 2 生成失败（实测该账号 9 场全为 2） */
+  replayStatus: number;
+  /** 页面上的告警文案，如「录像时长远小于开播时长，请关注直播时网络状况」 */
+  alertMessage?: string;
+  /** 录像生成状态文案，如「录像生成失败，请稍后再试」 */
+  alarmMessage?: string;
+  roomId: number;
+}
+
+interface RawCloudReplay {
+  replay_id?: number;
+  live_info?: { title?: string; cover?: string; live_time?: number };
+  video_info?: {
+    replay_status?: number;
+    duration?: number;
+    alert_message?: string;
+  };
+  alarm_info?: { message?: string };
+  room_id?: number;
+}
+
+/**
+ * 拉取云端录制列表（主播中心「直播回放」用的就是这个接口）。
+ * 返回全部记录，包括生成失败的 —— 生成失败必须让用户看见，不能静默过滤。
+ */
+export async function fetchCloudReplays(
+  page = 1,
+  pageSize = 50,
+): Promise<CloudReplay[]> {
+  const res = await request<{ replay_info?: RawCloudReplay[] }>(
+    API,
+    `/xlive/app-blink/v1/anchorVideo/AnchorGetReplayList?page=${page}&page_size=${pageSize}`,
+    {
+      headers: {
+        Origin: "https://link.bilibili.com",
+        Referer: "https://link.bilibili.com/p/center/index",
+      },
+    },
+  );
+  const list = res?.replay_info ?? [];
+  return list.map((it) => ({
+    replayId: it.replay_id ?? 0,
+    title: it.live_info?.title ?? "（无标题）",
+    cover: it.live_info?.cover ?? "",
+    liveTime: it.live_info?.live_time ?? 0,
+    duration: it.video_info?.duration ?? 0,
+    replayStatus: it.video_info?.replay_status ?? 0,
+    alertMessage: it.video_info?.alert_message,
+    alarmMessage: it.alarm_info?.message,
+    roomId: it.room_id ?? 0,
+  }));
+}
+
+/**
+ * 取云端录制的下载地址（B 站官方合并下载接口）。
+ * 生成失败时 B 站返回「下载服务调用出错」—— 这里如实抛出，由界面提示用户。
+ */
+export async function fetchCloudDownloadUrl(replayId: number): Promise<string> {
+  const res = await request<{ url?: string; download_url?: string } | string>(
+    API,
+    `/xlive/app-blink/v1/record/downloadMergeVideo?id=${replayId}`,
+    {
+      headers: {
+        Origin: "https://link.bilibili.com",
+        Referer: "https://link.bilibili.com/p/center/index",
+      },
+    },
+  );
+  if (typeof res === "string" && res.startsWith("http")) return res;
+  const url = (res as { url?: string; download_url?: string })?.url ??
+    (res as { download_url?: string })?.download_url;
+  if (!url) throw new Error("B 站没有返回下载地址（该录像可能尚未生成成功）");
+  return url;
 }

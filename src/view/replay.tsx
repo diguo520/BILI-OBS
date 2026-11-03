@@ -2,7 +2,9 @@
  * 直播回放：列表 + 下载。
  *
  * 实测要点（详见 直播回放方案.md）：
- *  - 回放是空间稿件，用 is_live_playback === 1 过滤，混在全部稿件里，需按页扫描；
+ *  - 有【两套】来源：① 云端录制 AnchorGetReplayList（主播中心那个页面，每场都有记录，
+ *    但可能生成失败）② 空间里已发布的回放稿件（is_live_playback === 1，可取 DASH 下载）。
+ *    只读 ② 会漏掉全部云端录制 —— 这是早期实现选错数据源的地方。
  *  - 下载是 DASH 双流（视频/音频分离），需 ffmpeg 合并；
  *  - 单场可达十几 GB，所以下载前必须给出体积预估。
  */
@@ -34,9 +36,12 @@ import {
 } from "@/components/ui/dialog";
 import { useConfigStore } from "@/store/config";
 import {
+  fetchCloudDownloadUrl,
+  fetchCloudReplays,
   fetchPlayInfo,
   fetchReplayDetail,
   fetchReplayPage,
+  type CloudReplay,
   type PlayInfo,
   type ReplayItem,
 } from "@/api/replay";
@@ -73,6 +78,8 @@ interface DownloadJob {
   audio: DlProgress | null;
   message?: string;
   outPath?: string;
+  /** 单文件（云端录制的合并流），无需 ffmpeg 合并 */
+  single?: boolean;
 }
 
 const MAX_SCAN_PAGES = 20;
@@ -99,6 +106,8 @@ export function ReplayView() {
   const config = useConfigStore((s) => s.config);
   const updateConfig = useConfigStore((s) => s.updateConfig);
   const [items, setItems] = useState<ReplayItem[]>([]);
+  /** 云端录制：每场直播都有记录，但可能「生成失败」——必须如实展示 */
+  const [cloud, setCloud] = useState<CloudReplay[]>([]);
   const [scanning, setScanning] = useState(false);
   const [scannedCount, setScannedCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -110,6 +119,8 @@ export function ReplayView() {
   const [busy, setBusy] = useState(false);
   const [saveDir, setSaveDir] = useState(config.replaySaveDir || "");
   const canceledRef = useRef<Record<string, boolean>>({});
+  /** 任务序号：用自增计数代替 Date.now()（后者在组件体内被判定为不纯调用） */
+  const seqRef = useRef(0);
 
   /**
    * 扫描全部稿件页，筛出回放。
@@ -129,6 +140,15 @@ export function ReplayView() {
     const found: ReplayItem[] = [];
     let arcCount = 0;
     try {
+      // ① 云端录制（主播中心那套，必读）
+      const cloudPages: CloudReplay[] = [];
+      for (let cp = 1; cp <= 5; cp++) {
+        const pageList = await fetchCloudReplays(cp, 50);
+        cloudPages.push(...pageList);
+        if (pageList.length < 50) break;
+        await sleep(PAGE_INTERVAL_MS);
+      }
+      setCloud(cloudPages.sort((a, b) => b.liveTime - a.liveTime));
       for (let pn = 1; pn <= MAX_SCAN_PAGES; pn++) {
         const page = await fetchReplayPage(
           config.uid,
@@ -143,10 +163,8 @@ export function ReplayView() {
         if (pn * 50 >= arcCount) break;
         await sleep(PAGE_INTERVAL_MS);
       }
-      if (!found.length) {
-        setError(
-          "没有找到直播回放（回放需在 B 站主播设置里开启「直播回放」录制后才会生成）",
-        );
+      if (!found.length && !cloudPages.length) {
+        setError("没有找到任何回放记录（云端录制为空，且空间里没有已发布的回放稿件）");
       }
     } catch (e) {
       setError((e as Error).message || "加载失败");
@@ -251,8 +269,8 @@ export function ReplayView() {
       },
       ...prev,
     ]);
-    const vTask = "v-" + item.bvid + "-" + Date.now();
-    const aTask = "a-" + item.bvid + "-" + Date.now();
+    const vTask = "v-" + item.bvid + "-" + ++seqRef.current;
+    const aTask = "a-" + item.bvid + "-" + ++seqRef.current;
     const patch = (fn: (j: DownloadJob) => DownloadJob) =>
       setJobs((prev) =>
         prev.map((j) => (j.bvid === item.bvid ? fn(j) : j)),
@@ -330,6 +348,63 @@ export function ReplayView() {
     }
   };
 
+  /** 下载云端录制：B 站官方合并流，单文件直下（不需要 ffmpeg） */
+  const downloadCloud = async (item: CloudReplay) => {
+    if (!item.replayId) return;
+    const base = (saveDir || config.replaySaveDir || "").trim();
+    if (!base) {
+      toast.error("请先填写保存目录");
+      return;
+    }
+    updateConfig({ replaySaveDir: base });
+    const stem =
+      formatStamp(item.liveTime) +
+      "_" +
+      sanitizeFileName(item.title) +
+      "_云端录制";
+    const outPath = joinPath(base, stem + ".mp4");
+    const key = "cloud-" + item.replayId;
+    const task = "c-" + item.replayId + "-" + ++seqRef.current;
+    setJobs((prev) => [
+      {
+        bvid: key,
+        title: item.title,
+        quality: 0,
+        phase: "video" as Phase,
+        video: {
+          task_id: task,
+          downloaded: 0,
+          total: 0,
+          speed: 0,
+          done: false,
+          canceled: false,
+          error: null,
+        },
+        audio: null,
+        single: true,
+      },
+      ...prev,
+    ]);
+    const patchJob = (fn: (j: DownloadJob) => DownloadJob) =>
+      setJobs((prev) => prev.map((j) => (j.bvid === key ? fn(j) : j)));
+    try {
+      // B 站侧生成失败时这一步就会抛错，如实告知用户
+      const url = await fetchCloudDownloadUrl(item.replayId);
+      await invoke<number>("replay_download", {
+        taskId: task,
+        urls: [url],
+        dest: outPath,
+        referer: "https://link.bilibili.com/",
+      });
+      patchJob((j) => ({ ...j, phase: "done", outPath }));
+      toast.success("已下载：" + stem + ".mp4");
+    } catch (e) {
+      const msg = (e as Error).message || String(e);
+      patchJob((j) => ({ ...j, phase: "error", message: msg }));
+      toast.error("该录像无法下载：" + msg);
+    }
+  };
+
   const totalSeconds = useMemo(
     () => items.reduce((acc, it) => acc + parseReplayLength(it.length), 0),
     [items],
@@ -356,10 +431,15 @@ export function ReplayView() {
             直播回放
           </h1>
           <p className="mt-1.5 text-[12px] text-muted-foreground">
-            {items.length
-              ? "共 " + items.length + " 场 · 累计 " + formatDuration(totalSeconds)
+            {cloud.length || items.length
+              ? "云端录制 " +
+                cloud.length +
+                " 场 · 已发布回放 " +
+                items.length +
+                " 场" +
+                (items.length ? " · 累计 " + formatDuration(totalSeconds) : "")
               : scanning
-                ? "正在扫描稿件…"
+                ? "正在扫描…"
                 : "暂无回放"}
             {scanning && items.length ? " · 已扫描 " + scannedCount + " 个稿件" : ""}
           </p>
@@ -409,7 +489,7 @@ export function ReplayView() {
                     <Badge
                       variant="outline"
                       className="border-0 bg-muted px-1.5 text-[10px] font-normal">
-                      {qualityName(j.quality)}
+                      {j.single ? "合并流" : qualityName(j.quality)}
                     </Badge>
                     <span className="shrink-0 tabular-nums text-muted-foreground">
                       {j.phase === "error"
@@ -479,6 +559,85 @@ export function ReplayView() {
       )}
 
       <div className="themed-scrollbar flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1">
+        {cloud.length > 0 && (
+          <div className="flex shrink-0 items-center gap-2 pt-0.5 text-[11px] text-muted-foreground">
+            <span className="font-medium text-foreground/80">云端录制</span>
+            <span>{cloud.length} 场 · 每场直播都有记录，生成失败的无法播放或下载</span>
+          </div>
+        )}
+        {cloud.map((it) => {
+          const failed = Boolean(it.alarmMessage);
+          return (
+            <div
+              key={"cloud-" + it.replayId}
+              className="flex gap-3 rounded-xl border border-border bg-card p-3 transition-colors hover:border-primary/30">
+              <div className="relative h-[68px] w-[120px] shrink-0 overflow-hidden rounded-lg bg-muted">
+                {it.cover ? (
+                  <img
+                    src={it.cover.replace(/^http:/, "https:")}
+                    alt=""
+                    loading="lazy"
+                    className="size-full object-cover"
+                  />
+                ) : null}
+                <span className="absolute right-1 bottom-1 rounded bg-black/70 px-1 text-[10px] tabular-nums text-white">
+                  {formatDuration(it.duration)}
+                </span>
+              </div>
+              <div className="flex min-w-0 flex-1 flex-col justify-center gap-1">
+                <div className="flex items-center gap-2">
+                  <span className="min-w-0 flex-1 truncate text-[13px] font-medium" title={it.title}>
+                    {it.title}
+                  </span>
+                  {failed ? (
+                    <Badge className="shrink-0 border-0 bg-destructive/15 text-[10px] font-normal text-destructive">
+                      {it.alarmMessage}
+                    </Badge>
+                  ) : (
+                    <Badge className="shrink-0 border-0 bg-success/15 text-[10px] font-normal text-success">
+                      可下载
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex flex-wrap items-center gap-2.5 text-[11px] text-muted-foreground">
+                  <span>
+                    {new Date(it.liveTime * 1000).toLocaleString("zh-CN", {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    })}
+                  </span>
+                  {it.alertMessage ? (
+                    <span className="min-w-0 truncate text-amber-400" title={it.alertMessage}>
+                      ⚠ {it.alertMessage}
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+              <div className="flex shrink-0 items-center gap-1.5">
+                <Button
+                  size="sm"
+                  variant={failed ? "outline" : "default"}
+                  className="h-7 rounded-lg text-[11px]"
+                  disabled={failed}
+                  title={
+                    failed
+                      ? "B 站尚未成功生成该录像，暂时无法下载"
+                      : "从 B 站下载这场录像"
+                  }
+                  onClick={() => void downloadCloud(it)}>
+                  <HugeiconsIcon icon={CloudDownloadIcon} className="size-3.5" />
+                  {failed ? "不可下载" : "下载"}
+                </Button>
+              </div>
+            </div>
+          );
+        })}
+        {items.length > 0 && (
+          <div className="flex shrink-0 items-center gap-2 pt-1.5 text-[11px] text-muted-foreground">
+            <span className="font-medium text-foreground/80">已发布回放</span>
+            <span>{items.length} 场 · 已发布成稿件的回放，可选清晰度下载</span>
+          </div>
+        )}
         {items.map((it) => {
           const seconds = parseReplayLength(it.length);
           return (
