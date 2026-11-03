@@ -19,6 +19,13 @@ import { encWbi } from "@/lib/wbi";
 import { request } from "@/lib/api";
 
 const API = "https://api.bilibili.com";
+/**
+ * 直播侧接口域名。实测（2026-11-03，带真实登录 Cookie）：
+ *  - AnchorGetReplayList / downloadMergeVideo 只存在于 api.live.bilibili.com，
+ *    打 api.bilibili.com 会返回网关 404 HTML（"出错啦! - bilibili.com"）；
+ *  - 空间稿件（arc/search）、稿件详情（view）、playurl 仍在 api.bilibili.com。
+ */
+const LIVE_API = "https://api.live.bilibili.com";
 
 /** 空间稿件中的一条回放（字段取自实测响应） */
 export interface ReplayItem {
@@ -215,7 +222,7 @@ export async function fetchCloudReplays(
   pageSize = 50,
 ): Promise<CloudReplay[]> {
   const res = await request<{ replay_info?: RawCloudReplay[] }>(
-    API,
+    LIVE_API,
     `/xlive/app-blink/v1/anchorVideo/AnchorGetReplayList?page=${page}&page_size=${pageSize}`,
     {
       headers: {
@@ -244,7 +251,7 @@ export async function fetchCloudReplays(
  */
 export async function fetchCloudDownloadUrl(replayId: number): Promise<string> {
   const res = await request<{ url?: string; download_url?: string } | string>(
-    API,
+    LIVE_API,
     `/xlive/app-blink/v1/record/downloadMergeVideo?id=${replayId}`,
     {
       headers: {
